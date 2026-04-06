@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memology 🔥</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Nunito:wght@400;600;800&display=swap');
+:root{
+  --bg:#0a0a0c;--card:#131317;--card2:#1a1a20;--border:#252530;
+  --accent:#ff3d6b;--accent2:#ffcc00;--accent3:#00e5ff;
+  --green:#00c97a;--purple:#a855f7;
+  --text:#f0f0f4;--muted:#5a5a6a;--r:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(255,61,107,.07),transparent),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(0,229,255,.05),transparent);pointer-events:none;z-index:0}
+.screen{display:none;min-height:100vh;padding:20px;animation:fadeIn .3s ease;position:relative;z-index:1}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+h1,h2,h3{font-family:'Unbounded',sans-serif}
+.logo{font-family:'Unbounded',sans-serif;font-size:clamp(2.2rem,8vw,4.8rem);font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;line-height:1;letter-spacing:-2px}
+.logo-sub{font-size:.9rem;color:var(--muted);text-align:center;margin-top:6px;letter-spacing:4px;text-transform:uppercase}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 30px;border:none;border-radius:50px;font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .18s;text-transform:uppercase;letter-spacing:.8px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#ff6b35);color:#fff;box-shadow:0 0 28px rgba(255,61,107,.35)}
+.btn-primary:hover{transform:scale(1.04);box-shadow:0 0 44px rgba(255,61,107,.55)}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:#222228;border-color:#333}
+.btn-gold{background:linear-gradient(135deg,var(--accent2),#ff9500);color:#0a0a0c;box-shadow:0 0 24px rgba(255,204,0,.3)}
+.btn-gold:hover{transform:scale(1.04)}
+.btn-cyan{background:linear-gradient(135deg,var(--accent3),#0088cc);color:#0a0a0c}
+.btn-cyan:hover{transform:scale(1.04)}
+.btn-green{background:linear-gradient(135deg,var(--green),#00a868);color:#0a0a0c}
+.btn-green:hover{transform:scale(1.04)}
+.btn:active{transform:scale(.96)!important}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+/* PANELS */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:26px;max-width:520px;width:100%}
+.divider{height:1px;background:var(--border);margin:18px 0;width:100%}
+/* INPUT */
+input[type=text]{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-family:'Nunito',sans-serif;font-size:.95rem;outline:none;transition:border-color .2s}
+input[type=text]:focus{border-color:var(--accent3)}
+/* ROOM CODE */
+.room-code{font-family:'Unbounded',sans-serif;font-size:clamp(2.4rem,9vw,3.8rem);font-weight:900;letter-spacing:14px;text-align:center;background:linear-gradient(135deg,var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:12px 0}
+.room-code-box{background:var(--card2);border:2px solid var(--border);border-radius:14px;padding:16px;text-align:center;margin:14px 0}
+/* PLAYER SLOTS */
+.player-slots{display:flex;flex-direction:column;gap:8px;width:100%;max-width:400px;margin:12px 0}
+.player-slot{display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:11px 15px;transition:all .25s}
+.player-slot.me{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.05)}
+.slot-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-family:'Unbounded',sans-serif;font-weight:900;flex-shrink:0}
+.slot-name{font-weight:700;font-size:.9rem}
+.slot-badge{margin-left:auto;font-size:.62rem;padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge-host{background:rgba(255,204,0,.12);color:var(--accent2);border:1px solid rgba(255,204,0,.3)}
+.badge-you{background:rgba(0,229,255,.1);color:var(--accent3);border:1px solid rgba(0,229,255,.25)}
+/* NUM BUTTONS */
+.num-grid{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.num-btn{min-width:64px;height:64px;border-radius:14px;border:2px solid var(--border);background:var(--card2);color:var(--text);font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:900;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;padding:0 10px}
+.num-btn:hover{border-color:var(--accent);background:rgba(255,61,107,.08)}
+.num-btn.selected{border-color:var(--accent);background:rgba(255,61,107,.16);box-shadow:0 0 14px rgba(255,61,107,.25)}
+/* DUAL CARD */
+.dual-card{width:min(320px,88vw);border-radius:22px;overflow:hidden;box-shadow:0 0 80px rgba(0,0,0,.8);margin:0 auto;border:1px solid rgba(255,255,255,.06)}
+.sit-half{padding:28px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;cursor:pointer;transition:filter .18s,opacity .28s;position:relative;gap:10px}
+.sit-half:hover{filter:brightness(1.12)}
+.sit-half.top{background:linear-gradient(155deg,#180728,#2a0e5a)}
+.sit-half.bottom{background:linear-gradient(155deg,#071c2a,#092828);transform:rotate(180deg)}
+.sit-label{font-size:.58rem;letter-spacing:3px;font-weight:800;text-transform:uppercase;opacity:.6}
+.sit-half.top .sit-label{color:#c9a0ff}
+.sit-half.bottom .sit-label{color:#70dede}
+.sit-text{font-size:clamp(.84rem,2.6vw,1rem);font-weight:800;line-height:1.5;text-align:center}
+.sit-half.top .sit-text{color:#f0e0ff}
+.sit-half.bottom .sit-text{color:#dff8f8}
+.sit-divider{height:4px;background:linear-gradient(90deg,#a855f7,#00e5ff)}
+.sit-half.not-chosen{opacity:.22;pointer-events:none}
+/* SIT DISPLAY */
+.sit-display{background:linear-gradient(135deg,#180728,#2a0e5a);border:1px solid rgba(168,85,247,.4);border-radius:14px;padding:16px 20px;margin-bottom:18px;text-align:center}
+.sit-display-label{font-size:.58rem;letter-spacing:3px;text-transform:uppercase;color:#c9a0ff;margin-bottom:7px;font-weight:700}
+.sit-display-text{font-size:clamp(.88rem,2.6vw,1.1rem);font-weight:800;line-height:1.5;color:#f0e0ff}
+/* HAND CARDS */
+.hand-area{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:660px;width:100%}
+.hand-card{background:var(--card2);border:2px solid var(--border);border-radius:13px;cursor:pointer;transition:all .2s;text-align:center;width:110px;overflow:hidden}
+.hand-card:hover{border-color:var(--accent2);transform:translateY(-4px);box-shadow:0 8px 20px rgba(255,204,0,.15)}
+.hand-card.selected-hand{border-color:var(--accent);background:rgba(255,61,107,.12);transform:translateY(-8px);box-shadow:0 12px 26px rgba(255,61,107,.25)}
+.hand-card img{width:100%;height:78px;object-fit:cover;display:block}
+.hand-card-title{font-size:.66rem;padding:6px 6px;color:var(--muted);font-weight:700;line-height:1.3}
+/* TABLE CARDS */
+.table-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:740px;width:100%}
+.table-card{background:var(--card);border:2px solid var(--border);border-radius:15px;transition:all .28s;text-align:center;width:138px;position:relative;overflow:hidden}
+.table-card.face-down{cursor:pointer}
+.table-card.face-down .tc-inner{visibility:hidden}
+.table-card.face-down::after{content:'🎴';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.6rem}
+.table-card.face-up{cursor:pointer}
+.table-card.face-up:hover{border-color:var(--accent2);transform:translateY(-5px);box-shadow:0 10px 24px rgba(255,204,0,.18)}
+.table-card.winning{border-color:var(--accent2)!important;box-shadow:0 0 28px rgba(255,204,0,.5)!important;background:rgba(255,204,0,.06)!important;transform:translateY(-8px)!important}
+.table-card img{width:100%;height:90px;object-fit:cover;display:block}
+.tc-title{font-size:.7rem;padding:7px 6px 5px;font-weight:700;color:var(--text);line-height:1.3}
+.tc-owner{font-size:.64rem;color:var(--muted);padding-bottom:7px}
+@keyframes flipIn{from{transform:rotateY(90deg);opacity:0}to{transform:rotateY(0);opacity:1}}
+.flip-in{animation:flipIn .38s ease both}
+/* STATUS */
+.status-list{display:flex;flex-direction:column;gap:7px;width:100%;max-width:370px}
+.status-row{display:flex;align-items:center;gap:11px;background:var(--card2);border-radius:11px;padding:10px 14px}
+.status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:all .3s}
+.status-dot.waiting{background:var(--border)}
+.status-dot.done{background:var(--green);box-shadow:0 0 7px var(--green)}
+/* SCOREBOARD */
+.scoreboard{display:flex;flex-direction:column;gap:9px;width:100%;max-width:460px}
+.score-row{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:13px;padding:13px 18px;border:1px solid var(--border)}
+.score-row.winner{background:linear-gradient(135deg,rgba(255,204,0,.13),rgba(255,100,0,.08));border-color:rgba(255,204,0,.35);box-shadow:0 0 16px rgba(255,204,0,.15)}
+.score-rank{font-family:'Unbounded',sans-serif;font-size:1rem;font-weight:900;width:32px;text-align:center}
+.score-name{flex:1;font-weight:700;font-size:.9rem}
+.score-pts{font-family:'Unbounded',sans-serif;font-weight:900;font-size:1.1rem;color:var(--accent2)}
+/* BADGES */
+.round-badge{background:var(--card2);border:1px solid var(--border);border-radius:50px;padding:5px 13px;font-size:.68rem;font-family:'Unbounded',sans-serif;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.phase-badge{border-radius:50px;padding:5px 13px;font-size:.68rem;font-family:'Unbounded',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:440px;width:100%;text-align:center;animation:popIn .28s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+/* TOAST */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--card2);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-size:.83rem;font-weight:700;z-index:2000;transition:transform .28s;white-space:nowrap;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+/* LOADING */
+.loading-dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:dotPulse 1.4s infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.pulsing{animation:pulse 1.5s infinite}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--card)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+/* CONFETTI */
+.confetti-container{position:fixed;inset:0;pointer-events:none;z-index:500;overflow:hidden}
+.confetti-piece{position:absolute;top:-20px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+</style>
+</head>
+<body>
+
+<!-- WELCOME -->
+<div class="screen active" id="screen-welcome">
+  <div style="text-align:center;max-width:460px;width:100%">
+    <div style="margin-bottom:16px;overflow:hidden">
+      <div id="tagline-wrap" style="display:inline-block;width:100%">
+        <div id="tagline" style="font-family:'Nunito',sans-serif;font-weight:800;font-style:italic;white-space:nowrap;color:transparent;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent3));-webkit-background-clip:text;background-clip:text;opacity:.9;display:inline-block;transform-origin:center top">✨ There's nothing a good meme can't solve ✨</div>
+      </div>
+    </div>
+    <div style="font-size:3.8rem;margin-bottom:12px">🎭</div>
+    <div class="logo" id="main-logo">Memology</div>
+    <div class="logo-sub">Study the chaos of memes</div>
+
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:11px;align-items:center">
+      <button class="btn btn-primary" onclick="showScreen('screen-create')" style="font-size:.95rem;padding:15px 42px">🏠 Создать комнату</button>
+      <button class="btn btn-cyan" onclick="showScreen('screen-join')" style="font-size:.95rem;padding:15px 42px">🔗 Войти в комнату</button>
+      <button class="btn btn-secondary" onclick="openModal('modal-howto')">📖 Как играть</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE ROOM -->
+<div class="screen" id="screen-create">
+  <div class="panel">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+      <button class="btn btn-secondary" onclick="showScreen('screen-welcome')" style="padding:9px 13px">←</button>
+      <h2 style="font-size:.95rem">Создать комнату</h2>
+    </div>
+    <div style="margin-bottom:18px">
+      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">👤 Твоё имя</div>
+      <input type="text" id="host-name" placeholder="Введи своё имя..." maxlength="20">
+    </div>
+    <div style="margin-bottom:22px">
+      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">👥 Число игроков</div>
+      <div class="num-grid players-grid">
+        <button class="num-btn" onclick="selectPlayers(3,this)">3</button>
+        <button class="num-btn" onclick="selectPlayers(4,this)">4</button>
+        <button class="num-btn" onclick="selectPlayers(5,this)">5</button>
+        <button class="num-btn" onclick="selectPlayers(6,this)">6</button>
+        <button class="num-btn" onclick="selectPlayers(7,this)">7</button>
+        <button class="num-btn" onclick="selectPlayers(8,this)">8</button>
+        <button class="num-btn" onclick="selectPlayers(9,this)">9</button>
+        <button class="num-btn" onclick="selectPlayers(10,this)">10</button>
+      </div>
+    </div>
+    <div style="margin-bottom:22px">
+      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">🔄 Число раундов</div>
+      <div class="num-grid rounds-grid">
+        <button class="num-btn" onclick="selectRounds(5,this)">5</button>
+        <button class="num-btn" onclick="selectRounds(15,this)">15</button>
+        <button class="num-btn" onclick="selectRounds(25,this)">25</button>
+        <button class="num-btn" onclick="selectRounds(9999,this)" style="font-size:1.6rem">∞</button>
+      </div>
+    </div>
+    <button class="btn btn-green" onclick="createRoom()" style="width:100%;justify-content:center;padding:15px;font-size:.9rem">
+      🚀 Создать комнату
+    </button>
+  </div>
+</div>
+
+<!-- JOIN ROOM -->
+<div class="screen" id="screen-join">
+  <div class="panel" style="max-width:380px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+      <button class="btn btn-secondary" onclick="showScreen('screen-welcome')" style="padding:9px 13px">←</button>
+      <h2 style="font-size:.95rem">Войти в комнату</h2>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">👤 Твоё имя</div>
+      <input type="text" id="join-name" placeholder="Введи своё имя..." maxlength="20">
+    </div>
+    <div style="margin-bottom:22px">
+      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">🔑 Код комнаты</div>
+      <input type="text" id="join-code" placeholder="ABCD" maxlength="4" style="font-family:'Unbounded',sans-serif;font-size:2rem;font-weight:900;letter-spacing:10px;text-align:center;text-transform:uppercase">
+    </div>
+    <button class="btn btn-cyan" onclick="joinRoom()" style="width:100%;justify-content:center;padding:15px;font-size:.9rem">🔗 Войти</button>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div class="screen" id="screen-lobby">
+  <div style="text-align:center;max-width:440px;width:100%">
+    <div style="font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:700" id="lobby-role-label">ХОСТ</div>
+    <h2 style="font-size:1.15rem;margin-bottom:5px">Комната создана!</h2>
+    <p style="color:var(--muted);font-size:.83rem;margin-bottom:3px">Код для друзей:</p>
+    <div class="room-code-box">
+      <div class="room-code" id="lobby-code">????</div>
+      <button class="btn btn-secondary" onclick="copyCode()" style="padding:7px 18px;font-size:.68rem;margin-top:4px">📋 Скопировать</button>
+    </div>
+    <div style="font-size:.76rem;color:var(--muted);margin-bottom:4px" id="lobby-rounds-label"></div>
+    <div class="player-slots" id="lobby-slots" style="margin:10px auto"></div>
+    <div id="lobby-host-controls" style="display:none;margin-top:14px">
+      <p style="color:var(--muted);font-size:.8rem;margin-bottom:10px" id="lobby-player-hint">Нужно минимум 3 игрока</p>
+      <button class="btn btn-green" onclick="startGame()" id="lobby-start-btn" disabled style="width:100%;justify-content:center;padding:14px">🎮 Начать игру!</button>
+    </div>
+    <div id="lobby-guest-wait" style="display:none;margin-top:14px">
+      <p style="color:var(--muted);font-size:.82rem" class="pulsing">Ждём начала от хоста...</p>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING CONTENT -->
+<div class="screen" id="screen-loading">
+  <div style="text-align:center">
+    <div style="font-size:2.8rem;margin-bottom:16px" class="pulsing">🎲</div>
+    <h2 style="font-size:1.1rem;margin-bottom:10px">Загрузка контента...</h2>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<!-- READER -->
+<div class="screen" id="screen-reader">
+  <div style="text-align:center;max-width:380px;width:100%">
+    <div style="font-family:'Unbounded',sans-serif;font-size:.68rem;letter-spacing:3px;color:var(--purple);margin-bottom:5px;text-transform:uppercase">🎤 Твой ход читать!</div>
+    <div style="display:flex;justify-content:center;gap:10px;margin-bottom:16px">
+      <div class="round-badge" id="reader-round-badge">РАУНД 1</div>
+    </div>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:18px;line-height:1.6">Зачитай обе ситуации вслух.<br>Нажми на ту, которую выбираешь.</p>
+    <div class="dual-card" id="dual-card"></div>
+    <p style="color:var(--muted);font-size:.7rem;margin-top:13px;line-height:1.5">💡 Нижняя написана вверх ногами — переверни устройство 😄</p>
+  </div>
+</div>
+
+<!-- WAITING SITUATION -->
+<div class="screen" id="screen-waiting-sit">
+  <div style="text-align:center;max-width:320px">
+    <div style="font-size:2.8rem;margin-bottom:12px" class="pulsing">⏳</div>
+    <h2 style="font-size:1.05rem;margin-bottom:8px">Ждём ситуацию...</h2>
+    <p style="color:var(--muted);font-size:.85rem;line-height:1.6" id="waiting-sit-text">Читающий выбирает</p>
+  </div>
+</div>
+
+<!-- PICK MEME -->
+<div class="screen" id="screen-pick">
+  <div style="width:100%;max-width:660px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="round-badge" id="pick-round-badge">РАУНД 1</div>
+      <div class="phase-badge" style="background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.35);color:var(--accent2)">ВЫБЕРИ МЕМ</div>
+    </div>
+    <div class="sit-display">
+      <div class="sit-display-label">📋 Ситуация раунда</div>
+      <div class="sit-display-text" id="pick-sit-text">—</div>
+    </div>
+    <p style="color:var(--muted);font-size:.83rem;margin-bottom:13px;text-align:center">Выбери мем из своих 5 карт:</p>
+    <div class="hand-area" id="pick-hand"></div>
+    <div style="margin-top:18px;text-align:center">
+      <button class="btn btn-primary" id="submit-btn" onclick="submitMeme()" disabled>✅ Отправить мем</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING OTHERS -->
+<div class="screen" id="screen-waiting-others">
+  <div style="text-align:center;max-width:390px;width:100%">
+    <div style="font-size:2.8rem;margin-bottom:11px">✅</div>
+    <h2 style="font-size:1.05rem;margin-bottom:8px">Мем отправлен!</h2>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:18px">Ждём остальных...</p>
+    <div class="status-list" id="waiting-status-list"></div>
+  </div>
+</div>
+
+<!-- READER WAITS -->
+<div class="screen" id="screen-reader-wait">
+  <div style="text-align:center;max-width:390px;width:100%">
+    <div style="font-size:2.6rem;margin-bottom:12px" class="pulsing">🎤</div>
+    <h2 style="font-size:1.05rem;margin-bottom:10px">Участники выбирают...</h2>
+    <div class="sit-display" style="margin:13px 0;text-align:left">
+      <div class="sit-display-label">Ты зачитал</div>
+      <div class="sit-display-text" id="reader-wait-sit">—</div>
+    </div>
+    <div class="status-list" id="reader-wait-status"></div>
+  </div>
+</div>
+
+<!-- JUDGE -->
+<div class="screen" id="screen-judge" style="justify-content:flex-start;padding-top:20px">
+  <div style="width:100%;max-width:760px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="round-badge" id="judge-round-badge">РАУНД 1</div>
+      <div class="phase-badge" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);color:var(--purple)">ГОЛОСОВАНИЕ</div>
+    </div>
+    <div class="sit-display" style="margin-bottom:14px">
+      <div class="sit-display-label">📋 Ситуация раунда</div>
+      <div class="sit-display-text" id="judge-sit-text">—</div>
+    </div>
+    <p style="color:var(--muted);font-size:.83rem;text-align:center;margin-bottom:16px" id="judge-instruction">Нажми чтобы раскрыть мемы!</p>
+    <div class="table-grid" id="judge-table"></div>
+    <div style="margin-top:18px;text-align:center">
+      <button class="btn btn-gold" id="judge-confirm-btn" onclick="judgeConfirm()" disabled style="display:none">🏆 Выбрать этот мем!</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING JUDGE -->
+<div class="screen" id="screen-waiting-judge">
+  <div style="text-align:center;max-width:320px">
+    <div style="font-size:2.8rem;margin-bottom:12px" class="pulsing">🤔</div>
+    <h2 style="font-size:1.05rem;margin-bottom:8px">Голосование...</h2>
+    <p style="color:var(--muted);font-size:.85rem;line-height:1.6" id="waiting-judge-text">Читающий выбирает лучший мем</p>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="screen-result">
+  <div style="text-align:center;max-width:680px;width:100%">
+    <div style="font-size:.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:8px;font-weight:700">🏆 Итог раунда</div>
+    <div id="result-winner-area" style="margin-bottom:20px"></div>
+    <div class="table-grid" id="result-all-cards" style="margin-bottom:24px;justify-content:center"></div>
+    <div style="display:flex;gap:11px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="showLiveScores()">📊 Счёт</button>
+      <button class="btn btn-cyan" id="next-round-btn">➡️ Следующий раунд</button>
+    </div>
+    <div id="host-only-hint" style="display:none;margin-top:10px">
+      <p style="color:var(--muted);font-size:.78rem" class="pulsing">Хост запустит следующий раунд...</p>
+    </div>
+  </div>
+</div>
+
+<!-- END -->
+<div class="screen" id="screen-end">
+  <div style="text-align:center;max-width:500px;width:100%">
+    <div style="font-size:3.8rem;margin-bottom:10px">🏆</div>
+    <div class="logo" style="font-size:2.2rem;margin-bottom:6px">ИГРА ОКОНЧЕНА!</div>
+    <div id="winner-text" style="font-size:1.05rem;color:var(--accent2);font-weight:700;margin-bottom:20px"></div>
+    <div class="scoreboard" id="final-scoreboard" style="margin-bottom:24px"></div>
+    <button class="btn btn-primary" onclick="showScreen('screen-welcome')">🏠 Главная</button>
+  </div>
+  <div class="confetti-container" id="confetti"></div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-howto">
+  <div class="modal">
+    <h2 style="font-size:1.1rem;margin-bottom:14px">📖 Как играть</h2>
+    <div style="text-align:left;line-height:1.85;font-size:.84rem;color:var(--muted)">
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">1. Хост создаёт комнату</strong> — выбирает имя и раунды. Делится кодом с друзьями.</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">2. Минимум 3 игрока</strong> — каждый входит по коду на своём устройстве.</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">3. Читающий</strong> — каждый раунд другой игрок. Видит карточку с 2 ситуациями (нижняя вверх ногами). Зачитывает обе вслух и выбирает одну.</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">4. Остальные</strong> — видят ситуацию и тайно выбирают один мем из 5.</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">5. Голосование</strong> — мемы перемешаны анонимно. Читающий раскрывает и выбирает лучший.</p>
+      <p><strong style="color:var(--text)">6. Очки</strong> — чей мем выбран, получает очко. Побеждает набравший больше всех!</p>
+    </div>
+    <button class="btn btn-primary" onclick="closeModal('modal-howto')" style="margin-top:16px;width:100%;justify-content:center">Понятно! 🎮</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-scores">
+  <div class="modal">
+    <h2 style="font-size:1.1rem;margin-bottom:14px">📊 Текущий счёт</h2>
+    <div class="scoreboard" id="live-scoreboard"></div>
+    <button class="btn btn-secondary" onclick="closeModal('modal-scores')" style="margin-top:16px;width:100%;justify-content:center">Закрыть</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CONFIGURE: вставь свои ключи сюда
+// ═══════════════════════════════════════════════════
+const CONFIG = {
+  // Firebase Realtime DB — для комнат и синхронизации игры
+  firebase: {
+    apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+  },
+  // Supabase — для хранения мемов и ситуаций
+  supabase: {
+    url: "https://YOUR_PROJECT.supabase.co",
+    anonKey: "PASTE_YOUR_SUPABASE_ANON_KEY",
+  }
+};
+
+// ═══════════════════════════════════════════════════
+//  SUPABASE  (контент: мемы + ситуации)
+// ═══════════════════════════════════════════════════
+const SB = {
+  async fetch(path, opts={}) {
+    const r = await fetch(`${CONFIG.supabase.url}/rest/v1/${path}`, {
+      headers: {
+        'apikey': CONFIG.supabase.anonKey,
+        'Authorization': `Bearer ${CONFIG.supabase.anonKey}`,
+        'Content-Type': 'application/json',
+        ...opts.headers
+      },
+      ...opts
+    });
+    if(!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
+    return r.json();
+  },
+  async getSituations() {
+    return this.fetch('situations?select=id,text&active=eq.true&order=id');
+  },
+  async getMemes() {
+    // Returns rows with: id, title, image_url
+    return this.fetch('memes?select=id,title,image_url&active=eq.true&order=id');
+  },
+  // Resolve public URL for image stored in Supabase Storage
+  imageUrl(path) {
+    return `${CONFIG.supabase.url}/storage/v1/object/public/memes/${path}`;
+  }
+};
+
+// ═══════════════════════════════════════════════════
+//  FIREBASE  (комнаты + realtime sync)
+// ═══════════════════════════════════════════════════
+let db = null;
+let roomRef = null;
+let _pollIv = null;
+
+function initFirebase() {
+  try {
+    if(!firebase.apps.length) firebase.initializeApp(CONFIG.firebase);
+    db = firebase.database();
+    return true;
+  } catch(e) { return false; }
+}
+
+const useFirebase = initFirebase() && !CONFIG.firebase.databaseURL.includes('YOUR_PROJECT');
+
+// BroadcastChannel + localStorage fallback (same device)
+const BC = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('memogram_v2') : null;
+if(BC) BC.onmessage = e => { if(e.data?.code===S.roomCode) { S.room=e.data.data; handleRoomUpdate(e.data.data); }};
+
+async function writeRoom(data) {
+  if(useFirebase) { await db.ref(`rooms/${S.roomCode}`).set(data); return; }
+  localStorage.setItem('mg_'+S.roomCode, JSON.stringify(data));
+  BC?.postMessage({code:S.roomCode, data});
+}
+async function patchRoom(patch) {
+  if(useFirebase) { await db.ref(`rooms/${S.roomCode}`).update(flattenPatch(patch)); return; }
+  const cur = readLocal();
+  const merged = deepMerge(cur||{}, patch);
+  localStorage.setItem('mg_'+S.roomCode, JSON.stringify(merged));
+  BC?.postMessage({code:S.roomCode, data:merged});
+  S.room = merged; handleRoomUpdate(merged);
+}
+function readLocal() {
+  try { return JSON.parse(localStorage.getItem('mg_'+S.roomCode)); } catch(e) { return null; }
+}
+function subscribeRoom(code) {
+  S.roomCode = code;
+  if(useFirebase) {
+    roomRef = db.ref(`rooms/${code}`);
+    roomRef.on('value', snap=>{ const d=snap.val(); if(d){S.room=d;handleRoomUpdate(d);} });
+  } else {
+    clearInterval(_pollIv);
+    let last='';
+    _pollIv = setInterval(()=>{
+      if(S.roomCode!==code){clearInterval(_pollIv);return;}
+      const raw=localStorage.getItem('mg_'+code);
+      if(raw&&raw!==last){last=raw;try{const d=JSON.parse(raw);S.room=d;handleRoomUpdate(d);}catch(e){}}
+    },380);
+  }
+}
+function flattenPatch(obj, prefix='') {
+  const out={};
+  for(const k in obj){
+    const key=prefix?`${prefix}/${k}`:k;
+    if(obj[k]&&typeof obj[k]==='object'&&!Array.isArray(obj[k])) Object.assign(out,flattenPatch(obj[k],key));
+    else out[key]=obj[k];
+  }
+  return out;
+}
+function deepMerge(t,s){
+  const o={...t};
+  for(const k in s){ o[k]=(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k]))?deepMerge(t[k]||{},s[k]):s[k]; }
+  return o;
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════
+const S = {
+  myName:'', myIdx:-1, isHost:false, roomCode:'',
+  selectedRounds:5, selectedPlayers:0,
+  room:null,
+  myHand:[],            // [{id,title,image_url}]
+  selectedHandIdx:null,
+  _judgeSelected:null,
+  // loaded content
+  allMemes:[],
+  allSituations:[],
+};
+
+const AVATARS=['🦊','🐼','🦁','🐸','🦋','🐙','🦄','🐻','🦅','🐯'];
+const COLORS=['#ff3d6b','#ffcc00','#00e5ff','#00c97a','#a855f7','#ff6b35','#0099dd','#e8427c','#34d399','#f59e0b'];
+
+// ═══════════════════════════════════════════════════
+//  UI UTILS
+// ═══════════════════════════════════════════════════
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function toast(msg,dur=2600){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur)}
+function shuffle(a){const arr=[...a];for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr}
+function genCode(){return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('')}
+function roundsLabel(r){return r===9999?'∞':r}
+
+function memeImg(m,h=90){
+  if(!m) return '';
+  const url = m.image_url.startsWith('http') ? m.image_url : SB.imageUrl(m.image_url);
+  return `<img src="${url}" alt="${m.title}" style="height:${h}px;width:100%;object-fit:cover;display:block" onerror="this.style.background='#1a1a20';this.style.height='${h}px'">`;
+}
+
+// ═══════════════════════════════════════════════════
+//  SETUP FORM
+// ═══════════════════════════════════════════════════
+function selectPlayers(n,btn){
+  S.selectedPlayers=n;
+  document.querySelectorAll('.players-grid .num-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+function selectRounds(n,btn){
+  S.selectedRounds=n;
+  document.querySelectorAll('.rounds-grid .num-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+window.onload = ()=>{
+  selectRounds(5,document.querySelector('.rounds-grid .num-btn'));
+  scaleTagline();
+};
+function scaleTagline(){
+  const logo=document.getElementById('main-logo');
+  const tagline=document.getElementById('tagline');
+  if(!logo||!tagline) return;
+  tagline.style.fontSize='1rem';
+  const logoW=logo.getBoundingClientRect().width;
+  const tagW=tagline.getBoundingClientRect().width;
+  const scale=logoW/tagW;
+  tagline.style.fontSize=scale+'rem';
+}
+window.addEventListener('resize',scaleTagline);
+
+// ═══════════════════════════════════════════════════
+//  LOAD CONTENT FROM SUPABASE
+// ═══════════════════════════════════════════════════
+async function loadContent() {
+  showScreen('screen-loading');
+  try {
+    const [memes, situations] = await Promise.all([SB.getMemes(), SB.getSituations()]);
+    if(!memes.length)    throw new Error('Нет мемов в базе данных');
+    if(!situations.length) throw new Error('Нет ситуаций в базе данных');
+    S.allMemes = memes;
+    S.allSituations = situations.map(s=>s.text);
+    return true;
+  } catch(e) {
+    toast(`Ошибка загрузки: ${e.message}`, 4000);
+    showScreen('screen-welcome');
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  CREATE ROOM
+// ═══════════════════════════════════════════════════
+async function createRoom() {
+  const name = document.getElementById('host-name').value.trim();
+  if(!name){ toast('Введи своё имя!'); return; }
+  if(!S.selectedPlayers){ toast('Выбери число игроков!'); return; }
+  if(!S.selectedRounds){ toast('Выбери число раундов!'); return; }
+
+  const ok = await loadContent();
+  if(!ok) return;
+
+  S.myName=name; S.isHost=true; S.myIdx=0;
+  const code = genCode(); S.roomCode=code;
+
+  const roomData = {
+    code, hostName:name, rounds:S.selectedRounds, maxPlayers:S.selectedPlayers,
+    phase:'lobby',
+    players:{ 0:{ name, score:0, idx:0 } },
+    playerCount:1,
+    currentRound:1, readerIdx:0,
+    situation:'', submissions:{}, tableCards:[], winnerIdx:-1,
+    readerSits:[], usedSituations:[],
+  };
+
+  await writeRoom(roomData);
+  subscribeRoom(code);
+  showLobby(roomData);
+}
+
+// ═══════════════════════════════════════════════════
+//  JOIN ROOM
+// ═══════════════════════════════════════════════════
+async function joinRoom() {
+  const name=document.getElementById('join-name').value.trim();
+  const code=document.getElementById('join-code').value.trim().toUpperCase();
+  if(!name){ toast('Введи своё имя!'); return; }
+  if(code.length!==4){ toast('Введи 4-буквенный код!'); return; }
+  S.myName=name; S.isHost=false; S.roomCode=code;
+
+  let existing=null;
+  if(useFirebase){ const snap=await db.ref(`rooms/${code}`).once('value'); existing=snap.val(); }
+  else existing=readLocal();
+  if(!existing){ toast('Комната не найдена 😕',3000); return; }
+  if(existing.phase!=='lobby'){ toast('Игра уже идёт!',3000); return; }
+  const maxP=existing.maxPlayers||10;
+  if((existing.playerCount||0)>=maxP){ toast(`Комната заполнена (${maxP}/${maxP})`,3000); return; }
+
+  const ok = await loadContent();
+  if(!ok) return;
+
+  const usedIdxs=Object.values(existing.players||{}).map(p=>p.idx);
+  let newIdx=0; while(usedIdxs.includes(newIdx)) newIdx++;
+  S.myIdx=newIdx;
+
+  const patch={};
+  patch[`players/${newIdx}`]={name,score:0,idx:newIdx};
+  patch['playerCount']=(existing.playerCount||0)+1;
+  if(useFirebase) await db.ref(`rooms/${code}`).update(patch);
+  else { const m=deepMerge(existing,patch); localStorage.setItem('mg_'+code,JSON.stringify(m)); BC?.postMessage({code,data:m}); }
+
+  subscribeRoom(code);
+  showScreen('screen-lobby');
+}
+
+// ═══════════════════════════════════════════════════
+//  LOBBY
+// ═══════════════════════════════════════════════════
+function showLobby(room){
+  document.getElementById('lobby-code').textContent=room.code;
+  document.getElementById('lobby-rounds-label').textContent=`Игроков: ${room.maxPlayers||'?'} · Раундов: ${roundsLabel(room.rounds)}`;
+  document.getElementById('lobby-role-label').textContent=S.isHost?'ВЫ — ХОСТ':'ВЫ — УЧАСТНИК';
+  document.getElementById('lobby-host-controls').style.display=S.isHost?'block':'none';
+  document.getElementById('lobby-guest-wait').style.display=S.isHost?'none':'block';
+  renderLobbySlots(room);
+  showScreen('screen-lobby');
+}
+function renderLobbySlots(room){
+  const max=room.maxPlayers||10;
+  const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx);
+  const filled=players.map(p=>`
+    <div class="player-slot ${p.idx===S.myIdx?'me':''}">
+      <div class="slot-avatar" style="background:${COLORS[p.idx]}18;color:${COLORS[p.idx]}">${AVATARS[p.idx]}</div>
+      <div class="slot-name">${p.name}</div>
+      ${p.idx===0?'<span class="slot-badge badge-host">Хост</span>':''}
+      ${p.idx===S.myIdx?'<span class="slot-badge badge-you">Ты</span>':''}
+    </div>`).join('');
+  const empty=Array.from({length:Math.max(0,max-players.length)},(_,i)=>`
+    <div class="player-slot" style="opacity:.35;border-style:dashed">
+      <div class="slot-avatar" style="background:var(--border);color:var(--muted)">${players.length+i+1}</div>
+      <div class="slot-name" style="color:var(--muted);font-weight:400">Ожидание...</div>
+    </div>`).join('');
+  document.getElementById('lobby-slots').innerHTML=filled+empty;
+  if(S.isHost){
+    const n=players.length, btn=document.getElementById('lobby-start-btn');
+    const allReady=n>=max;
+    btn.disabled=n<3;
+    document.getElementById('lobby-player-hint').textContent=
+      allReady ? `Все ${max} игроков в комнате — начинаем!` :
+      n<3 ? `Ждём игроков... (${n}/${max})` :
+      `${n} из ${max} игроков — можно начинать!`;
+  }
+}
+function copyCode(){ navigator.clipboard.writeText(S.roomCode).then(()=>toast('Код скопирован! 📋')).catch(()=>toast(S.roomCode)); }
+
+// ═══════════════════════════════════════════════════
+//  START GAME (host)
+// ═══════════════════════════════════════════════════
+async function startGame() {
+  const room=S.room;
+  const players=Object.values(room.players).sort((a,b)=>a.idx-b.idx);
+  // Deal 5 memes each
+  let pool=shuffle([...S.allMemes]);
+  const hands={};
+  players.forEach(p=>{
+    if(pool.length<5) pool=[...pool,...shuffle(S.allMemes)];
+    hands[p.idx]=pool.splice(0,5);
+  });
+  // Pick 2 situations for first reader
+  const sitPool=shuffle([...S.allSituations]);
+  const sits=[sitPool[0], sitPool[1]||sitPool[0]];
+  await patchRoom({ phase:'reader', currentRound:1, readerIdx:0, hands, situation:'', submissions:{}, tableCards:[], winnerIdx:-1, readerSits:sits, usedSituations:sits });
+}
+
+// ═══════════════════════════════════════════════════
+//  REALTIME DISPATCH
+// ═══════════════════════════════════════════════════
+function handleRoomUpdate(room){
+  if(!room) return;
+  if(room.hands?.[S.myIdx]) S.myHand=room.hands[S.myIdx];
+  const phase=room.phase, isReader=S.myIdx===room.readerIdx;
+  const cur=document.querySelector('.screen.active')?.id;
+
+  if(phase==='lobby'){ if(cur==='screen-lobby'||cur==='screen-welcome') { showLobby(room); } return; }
+  if(phase==='reader'){
+    if(isReader && cur!=='screen-reader') showReaderScreen(room);
+    else if(!isReader && cur!=='screen-waiting-sit') showWaitingSit(room);
+  }
+  else if(phase==='picking'){
+    const mySub=room.submissions?.[S.myIdx];
+    if(!isReader){
+      if(!mySub && cur!=='screen-pick') showPickScreen(room);
+      else if(mySub) { if(cur!=='screen-waiting-others') showWaitingOthers(room); else renderWaitStatus(room); }
+    } else {
+      if(cur!=='screen-reader-wait') showReaderWait(room); else { renderReaderWaitStatus(room); if(S.isHost) checkAllSubmitted(room); }
+    }
+  }
+  else if(phase==='judging'){
+    if(isReader && cur!=='screen-judge') showJudgeScreen(room,false);
+    else if(!isReader && cur!=='screen-waiting-judge') showWaitingJudge(room);
+  }
+  else if(phase==='result'){ if(cur!=='screen-result') showResultScreen(room); }
+  else if(phase==='end'){ if(cur!=='screen-end') showEndScreen(room); }
+
+  // Live status updates
+  if(cur==='screen-waiting-others') renderWaitStatus(room);
+  if(cur==='screen-reader-wait'){ renderReaderWaitStatus(room); if(S.isHost) checkAllSubmitted(room); }
+}
+
+// ═══════════════════════════════════════════════════
+//  READER
+// ═══════════════════════════════════════════════════
+function showReaderScreen(room){
+  document.getElementById('reader-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  const sits=room.readerSits||['',''];
+  document.getElementById('dual-card').innerHTML=`
+    <div class="sit-half top" id="sh-top" onclick="readerChoose(0)">
+      <div class="sit-label">Ситуация А — нажми чтобы выбрать</div>
+      <div class="sit-text">${sits[0]}</div>
+    </div>
+    <div class="sit-divider"></div>
+    <div class="sit-half bottom" id="sh-bot" onclick="readerChoose(1)">
+      <div class="sit-text">${sits[1]}</div>
+      <div class="sit-label">Ситуация Б — нажми чтобы выбрать</div>
+    </div>`;
+  showScreen('screen-reader');
+}
+async function readerChoose(idx){
+  const top=document.getElementById('sh-top'),bot=document.getElementById('sh-bot');
+  if(!top||!bot) return;
+  (idx===0?bot:top).classList.add('not-chosen');
+  (idx===0?top:bot).style.pointerEvents='none';
+  const sit=S.room.readerSits[idx];
+  await patchRoom({ phase:'picking', situation:sit, submissions:{} });
+  setTimeout(()=>showReaderWait(S.room),700);
+}
+
+// ═══════════════════════════════════════════════════
+//  WAITING SIT
+// ═══════════════════════════════════════════════════
+function showWaitingSit(room){
+  document.getElementById('waiting-sit-text').textContent=`${room.players?.[room.readerIdx]?.name||'Читающий'} выбирает ситуацию...`;
+  showScreen('screen-waiting-sit');
+}
+
+// ═══════════════════════════════════════════════════
+//  PICK SCREEN
+// ═══════════════════════════════════════════════════
+function showPickScreen(room){
+  document.getElementById('pick-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  document.getElementById('pick-sit-text').textContent=room.situation;
+  S.selectedHandIdx=null;
+  document.getElementById('submit-btn').disabled=true;
+  document.getElementById('pick-hand').innerHTML=(S.myHand||[]).map((m,i)=>`
+    <div class="hand-card" onclick="selectCard(${i})" id="hc-${i}">
+      ${memeImg(m,78)}
+      <div class="hand-card-title">${m.title}</div>
+    </div>`).join('');
+  showScreen('screen-pick');
+}
+function selectCard(i){
+  S.selectedHandIdx=i;
+  document.querySelectorAll('.hand-card').forEach((c,idx)=>c.classList.toggle('selected-hand',idx===i));
+  document.getElementById('submit-btn').disabled=false;
+}
+async function submitMeme(){
+  const meme=S.myHand[S.selectedHandIdx]; if(!meme) return;
+  S.myHand.splice(S.selectedHandIdx,1);
+  const patch={};
+  patch[`submissions/${S.myIdx}`]={id:meme.id,title:meme.title,image_url:meme.image_url};
+  patch[`hands/${S.myIdx}`]=S.myHand;
+  await patchRoom(patch);
+  showWaitingOthers(S.room);
+}
+
+// ═══════════════════════════════════════════════════
+//  WAITING SCREENS
+// ═══════════════════════════════════════════════════
+function showWaitingOthers(room){ renderWaitStatus(room); showScreen('screen-waiting-others'); }
+function renderWaitStatus(room){
+  if(!room) return;
+  const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx).filter(p=>p.idx!==room.readerIdx);
+  const subs=room.submissions||{};
+  document.getElementById('waiting-status-list').innerHTML=players.map(p=>`
+    <div class="status-row">
+      <div class="status-dot ${subs[p.idx]?'done':'waiting'}"></div>
+      <div style="font-weight:700">${p.name}</div>
+      <div style="margin-left:auto;font-size:.74rem;color:var(--muted)">${subs[p.idx]?'✅ Готов':'⏳...'}</div>
+    </div>`).join('');
+}
+function showReaderWait(room){
+  document.getElementById('reader-wait-sit').textContent=room.situation||'—';
+  renderReaderWaitStatus(room);
+  showScreen('screen-reader-wait');
+  if(S.isHost) checkAllSubmitted(room);
+}
+function renderReaderWaitStatus(room){
+  if(!room) return;
+  const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx).filter(p=>p.idx!==room.readerIdx);
+  const subs=room.submissions||{};
+  document.getElementById('reader-wait-status').innerHTML=players.map(p=>`
+    <div class="status-row">
+      <div class="status-dot ${subs[p.idx]?'done':'waiting'}"></div>
+      <div style="font-weight:700">${p.name}</div>
+      <div style="margin-left:auto;font-size:.74rem;color:var(--muted)">${subs[p.idx]?'✅ Готов':'⏳...'}</div>
+    </div>`).join('');
+}
+async function checkAllSubmitted(room){
+  if(!room||!S.isHost) return;
+  const players=Object.values(room.players||{}).filter(p=>p.idx!==room.readerIdx);
+  const subs=room.submissions||{};
+  if(!players.every(p=>subs[p.idx])) return;
+  const tableCards=shuffle(players.map(p=>({playerIdx:p.idx,...subs[p.idx]})));
+  await patchRoom({phase:'judging',tableCards});
+}
+function showWaitingJudge(room){
+  document.getElementById('waiting-judge-text').textContent=`${room.players?.[room.readerIdx]?.name||'Читающий'} выбирает лучший мем...`;
+  showScreen('screen-waiting-judge');
+}
+
+// ═══════════════════════════════════════════════════
+//  JUDGE
+// ═══════════════════════════════════════════════════
+function showJudgeScreen(room,revealed){
+  document.getElementById('judge-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  document.getElementById('judge-sit-text').textContent=room.situation;
+  const cards=room.tableCards||[], btn=document.getElementById('judge-confirm-btn');
+  S._judgeSelected=null;
+  if(!revealed){
+    document.getElementById('judge-instruction').textContent='🔀 Мемы перемешаны анонимно — нажми чтобы раскрыть!';
+    document.getElementById('judge-table').innerHTML=cards.map((_,i)=>`
+      <div class="table-card face-down" onclick="revealCards()"><div class="tc-inner"></div></div>`).join('');
+    btn.style.display='none';
+  } else {
+    document.getElementById('judge-instruction').textContent='👇 Выбери самый смешной мем!';
+    document.getElementById('judge-table').innerHTML=cards.map((tc,i)=>`
+      <div class="table-card face-up flip-in" id="jc-${i}" onclick="judgeSelect(${i})" style="animation-delay:${i*.07}s">
+        <div class="tc-inner">${memeImg(tc,90)}<div class="tc-title">${tc.title}</div></div>
+      </div>`).join('');
+    btn.style.display='inline-flex'; btn.disabled=true;
+  }
+  showScreen('screen-judge');
+}
+function revealCards(){ showJudgeScreen(S.room,true); }
+function judgeSelect(i){
+  S._judgeSelected=i;
+  document.querySelectorAll('.table-card.face-up').forEach((el,idx)=>el.classList.toggle('winning',idx===i));
+  document.getElementById('judge-confirm-btn').disabled=false;
+}
+async function judgeConfirm(){
+  if(S._judgeSelected==null) return;
+  const card=S.room.tableCards[S._judgeSelected];
+  const winnerIdx=card.playerIdx;
+  const playerPatch={};
+  Object.values(S.room.players).forEach(p=>{ playerPatch[`players/${p.idx}/score`]=(p.score||0)+(p.idx===winnerIdx?1:0); });
+  const isLast=S.room.currentRound>=S.room.rounds;
+  await patchRoom({...playerPatch, winnerIdx, phase:isLast?'end':'result'});
+}
+
+// ═══════════════════════════════════════════════════
+//  RESULT
+// ═══════════════════════════════════════════════════
+function showResultScreen(room){
+  const winner=room.players?.[room.winnerIdx], cards=room.tableCards||[];
+  const winCard=cards.find(c=>c.playerIdx===room.winnerIdx);
+  document.getElementById('result-winner-area').innerHTML=winner&&winCard?`
+    <div style="background:linear-gradient(135deg,rgba(255,204,0,.12),rgba(255,100,0,.08));border:2px solid rgba(255,204,0,.3);border-radius:16px;padding:20px;box-shadow:0 0 32px rgba(255,204,0,.18);max-width:360px;margin:0 auto">
+      <div style="font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:7px;font-weight:700">🏆 Победитель раунда</div>
+      <div style="font-family:'Unbounded',sans-serif;font-size:1.3rem;font-weight:900;margin-bottom:10px">${winner.name}</div>
+      <div style="border-radius:10px;overflow:hidden;max-height:100px">${memeImg(winCard,100)}</div>
+      <div style="color:var(--muted);font-size:.82rem;margin-top:8px">«${winCard.title}»</div>
+    </div>`:
+    `<div style="color:var(--muted);padding:14px">Ничья 😅</div>`;
+
+  document.getElementById('result-all-cards').innerHTML=cards.map(tc=>{
+    const p=room.players?.[tc.playerIdx],isWin=tc.playerIdx===room.winnerIdx;
+    return `<div class="table-card face-up ${isWin?'winning':''}">
+      <div class="tc-inner">${memeImg(tc,90)}
+      <div class="tc-title">${tc.title}</div>
+      <div class="tc-owner">${p?.name||'?'}${isWin?' 🏆':''}</div></div></div>`;
+  }).join('');
+
+  const btn=document.getElementById('next-round-btn');
+  const hint=document.getElementById('host-only-hint');
+  if(S.isHost){
+    btn.style.display='inline-flex'; btn.style.opacity='1'; hint.style.display='none';
+    btn.onclick=nextRound;
+  } else {
+    btn.style.display='none'; hint.style.display='block';
+  }
+  showScreen('screen-result');
+}
+async function nextRound(){
+  const room=S.room;
+  const nextRoundNum=(room.currentRound||1)+1;
+  const nextReaderIdx=((room.readerIdx||0)+1)%Object.keys(room.players).length;
+  // Replenish hands
+  const players=Object.values(room.players).sort((a,b)=>a.idx-b.idx);
+  const hands={};
+  let pool=shuffle([...S.allMemes]);
+  players.forEach(p=>{
+    const existing=room.hands?.[p.idx]||[];
+    let h=[...existing];
+    while(h.length<5){ if(!pool.length) pool=shuffle([...S.allMemes]); h.push(pool.shift()); }
+    hands[p.idx]=h;
+  });
+  // New situations
+  const used=room.usedSituations||[];
+  const avail=S.allSituations.filter(s=>!used.includes(s));
+  const sitPool=shuffle(avail.length>=2?avail:[...S.allSituations]);
+  const sits=[sitPool[0],sitPool[1]||sitPool[0]];
+  await patchRoom({ phase:'reader', currentRound:nextRoundNum, readerIdx:nextReaderIdx, hands, situation:'', submissions:{}, tableCards:[], winnerIdx:-1, readerSits:sits, usedSituations:[...used,...sits] });
+}
+
+function showLiveScores(){
+  const room=S.room; if(!room) return;
+  const players=Object.values(room.players||{}).sort((a,b)=>(b.score||0)-(a.score||0));
+  document.getElementById('live-scoreboard').innerHTML=players.map((p,i)=>`
+    <div class="score-row ${i===0?'winner':''}">
+      <div class="score-rank">${['🥇','🥈','🥉'][i]||(i+1)+'.'}</div>
+      <div class="score-name">${p.name}</div>
+      <div class="score-pts">${p.score||0}</div>
+    </div>`).join('');
+  openModal('modal-scores');
+}
+
+// ═══════════════════════════════════════════════════
+//  END
+// ═══════════════════════════════════════════════════
+function showEndScreen(room){
+  const players=Object.values(room.players||{}).sort((a,b)=>(b.score||0)-(a.score||0));
+  document.getElementById('winner-text').textContent=`🎉 ${players[0].name} победил с ${players[0].score||0} очками!`;
+  document.getElementById('final-scoreboard').innerHTML=players.map((p,i)=>`
+    <div class="score-row ${i===0?'winner':''}">
+      <div class="score-rank">${['🥇','🥈','🥉'][i]||(i+1)+'.'}</div>
+      <div class="score-name">${p.name}</div>
+      <div class="score-pts">${p.score||0} очков</div>
+    </div>`).join('');
+  showScreen('screen-end'); spawnConfetti();
+}
+
+function spawnConfetti(){
+  const c=document.getElementById('confetti'); c.innerHTML='';
+  const cols=['#ff3d6b','#ffcc00','#00e5ff','#ff6b35','#00c97a','#a855f7'];
+  for(let i=0;i<90;i++){
+    const el=document.createElement('div'); el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}%;background:${cols[~~(Math.random()*cols.length)]};width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;border-radius:${Math.random()>.5?'50%':'3px'};animation-duration:${1.5+Math.random()*2.5}s;animation-delay:${Math.random()*1.5}s`;
+    c.appendChild(el);
+  }
+}
+</script>
+</body>
+</html>

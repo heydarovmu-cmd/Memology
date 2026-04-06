@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МЕМОГРАМ — Админ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Nunito:wght@400;600;800&display=swap');
+:root{--bg:#0a0a0c;--card:#131317;--card2:#1a1a20;--border:#252530;--accent:#ff3d6b;--accent2:#ffcc00;--accent3:#00e5ff;--green:#00c97a;--text:#f0f0f4;--muted:#5a5a6a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:16px}
+.topbar-logo{font-family:'Unbounded',sans-serif;font-size:1.1rem;font-weight:900;background:linear-gradient(135deg,#ff3d6b,#ffcc00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-sub{font-size:.72rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.status-chip{margin-left:auto;padding:5px 14px;border-radius:50px;font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.status-chip.ok{background:rgba(0,201,122,.12);border:1px solid rgba(0,201,122,.3);color:#00c97a}
+.status-chip.error{background:rgba(255,61,107,.12);border:1px solid rgba(255,61,107,.3);color:#ff3d6b}
+.status-chip.loading{background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.25);color:#ffcc00}
+.container{max-width:1100px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:700px){.container{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px}
+.panel-title{font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.panel-count{background:var(--card2);border:1px solid var(--border);border-radius:50px;padding:2px 10px;font-size:.7rem;font-weight:900;color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border:none;border-radius:50px;font-family:'Unbounded',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .18s;text-transform:uppercase;letter-spacing:.6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#ff6b35);color:#fff}
+.btn-primary:hover{transform:scale(1.04)}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:#222228}
+.btn-green{background:linear-gradient(135deg,var(--green),#00a868);color:#0a0a0c}
+.btn-green:hover{transform:scale(1.04)}
+.btn-danger{background:rgba(255,61,107,.12);color:var(--accent);border:1px solid rgba(255,61,107,.25)}
+.btn-danger:hover{background:rgba(255,61,107,.2)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+.btn:active{transform:scale(.95)!important}
+input[type=text],textarea{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:'Nunito',sans-serif;font-size:.9rem;outline:none;transition:border-color .18s;resize:vertical}
+input[type=text]:focus,textarea:focus{border-color:var(--accent3)}
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .18s;margin:10px 0;position:relative}
+.upload-zone:hover{border-color:var(--accent2);background:rgba(255,204,0,.03)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-progress{height:4px;background:var(--card2);border-radius:2px;margin:8px 0;overflow:hidden;display:none}
+.upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .3s;width:0}
+/* MEME GRID */
+.meme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:500px;overflow-y:auto;margin-top:14px}
+.meme-item{background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative;transition:all .2s}
+.meme-item:hover{border-color:var(--accent)}
+.meme-item img{width:100%;height:90px;object-fit:cover;display:block}
+.meme-item-footer{padding:7px 8px;display:flex;align-items:center;gap:6px}
+.meme-item-title{font-size:.7rem;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meme-del-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 4px;font-size:.85rem;transition:color .15s;flex-shrink:0}
+.meme-del-btn:hover{color:var(--accent)}
+.meme-item.inactive{opacity:.38}
+.meme-item.inactive .meme-item-footer{background:rgba(255,61,107,.06)}
+/* SITUATION LIST */
+.sit-list{display:flex;flex-direction:column;gap:7px;max-height:460px;overflow-y:auto;margin-top:14px}
+.sit-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;display:flex;align-items:flex-start;gap:10px;transition:all .2s}
+.sit-item:hover{border-color:rgba(255,255,255,.1)}
+.sit-item.inactive{opacity:.38}
+.sit-text{flex:1;font-size:.85rem;line-height:1.45}
+.sit-actions{display:flex;gap:5px;flex-shrink:0}
+.sit-toggle-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;padding:3px 8px;font-size:.72rem;transition:all .15s}
+.sit-toggle-btn:hover{border-color:var(--accent3);color:var(--accent3)}
+.sit-del-btn{background:none;border:1px solid transparent;border-radius:6px;color:var(--muted);cursor:pointer;padding:3px 6px;font-size:.8rem;transition:all .15s}
+.sit-del-btn:hover{color:var(--accent)}
+/* CONFIG PANEL */
+.config-panel{background:var(--card);border:2px solid rgba(255,61,107,.2);border-radius:18px;padding:24px;margin-bottom:24px;grid-column:1/-1}
+.config-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:600px){.config-row{grid-template-columns:1fr}}
+.config-label{font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:700}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:.84rem;font-weight:700;z-index:1000;transform:translateY(60px);opacity:0;transition:all .25s;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:rgba(0,201,122,.35);color:var(--green)}
+.toast.error{border-color:rgba(255,61,107,.35);color:var(--accent)}
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:16px 0}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--card)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.tab-btn{padding:7px 16px;border-radius:50px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-family:'Unbounded',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer;transition:all .18s;text-transform:uppercase;letter-spacing:.5px}
+.tab-btn:hover{border-color:var(--accent3);color:var(--accent3)}
+.tab-btn.active{background:rgba(0,229,255,.1);border-color:var(--accent3);color:var(--accent3)}
+.preview-sit-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.82rem;line-height:1.4;display:flex;gap:8px;align-items:flex-start}
+.preview-sit-item.excluded{opacity:.35;text-decoration:line-through}
+.preview-sit-check{width:16px;height:16px;border-radius:4px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;margin-top:1px;accent-color:var(--green)}
+.badge-active{background:rgba(0,201,122,.1);border:1px solid rgba(0,201,122,.25);color:#00c97a;font-size:.62rem;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:1px}
+.badge-inactive{background:rgba(255,61,107,.08);border:1px solid rgba(255,61,107,.2);color:#ff3d6b;font-size:.62rem;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:1px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-logo">МЕМОГРАМ</div>
+    <div class="topbar-sub">Панель управления контентом</div>
+  </div>
+  <div class="status-chip loading" id="db-status">Подключение...</div>
+</div>
+
+<div style="max-width:1100px;margin:0 auto;padding:24px 20px">
+
+  <!-- CONFIG -->
+  <div class="config-panel">
+    <div style="font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">⚙️ Настройка подключения</div>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:2px">Вставь ключи из Supabase Dashboard → Project Settings → API</p>
+    <div class="config-row">
+      <div>
+        <div class="config-label">Supabase URL</div>
+        <input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co" oninput="saveConfig()">
+      </div>
+      <div>
+        <div class="config-label">Anon/Public Key</div>
+        <input type="text" id="cfg-key" placeholder="eyJhbGci..." oninput="saveConfig()">
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="testConnection()">🔌 Проверить подключение</button>
+      <button class="btn btn-secondary" onclick="loadAll()">🔄 Обновить данные</button>
+      <a href="https://supabase.com" target="_blank" class="btn btn-secondary" style="text-decoration:none">📖 Supabase</a>
+    </div>
+    <div id="setup-hint" style="margin-top:14px;background:var(--card2);border-radius:10px;padding:14px;font-size:.8rem;color:var(--muted);line-height:1.8">
+      <strong style="color:var(--text)">Быстрый старт:</strong><br>
+      1. Зайди на <strong style="color:var(--accent3)">supabase.com</strong> → создай бесплатный проект<br>
+      2. Перейди в <strong style="color:var(--accent2)">SQL Editor</strong> и выполни SQL ниже (кнопка)<br>
+      3. Вставь URL и ключ выше → нажми «Проверить подключение»<br>
+      4. Загружай мемы и ситуации!
+      <div style="margin-top:10px">
+        <button class="btn btn-secondary" onclick="showSQL()" style="font-size:.72rem;padding:7px 14px">📋 Показать SQL для создания таблиц</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="padding:0;margin-bottom:24px">
+
+    <!-- MEMES -->
+    <div class="panel">
+      <div class="panel-title">
+        🖼️ Мемы
+        <span class="panel-count" id="meme-count">0</span>
+        <button class="btn btn-green" onclick="document.getElementById('meme-file-input').click()" style="margin-left:auto;padding:7px 16px;font-size:.7rem">+ Загрузить</button>
+        <input type="file" id="meme-file-input" accept="image/*" multiple style="display:none" onchange="uploadMemes(this)">
+      </div>
+      <div class="upload-progress" id="upload-progress">
+        <div class="upload-progress-bar" id="upload-progress-bar"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input type="text" id="meme-title-input" placeholder="Название (необязательно, для следующей загрузки)..." style="font-size:.82rem">
+      </div>
+      <p style="font-size:.74rem;color:var(--muted);margin-bottom:4px">Название берётся из имени файла. Можно загрузить сразу много.</p>
+      <div class="meme-grid" id="meme-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- SITUATIONS -->
+    <div class="panel">
+      <div class="panel-title">
+        💬 Ситуации
+        <span class="panel-count" id="sit-count">0</span>
+      </div>
+
+      <!-- Manual add -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <textarea id="sit-input" placeholder="Введи ситуацию вручную..." rows="2" style="resize:none;font-size:.88rem"></textarea>
+        <button class="btn btn-green" onclick="addSituation()" style="white-space:nowrap;align-self:flex-start;padding:11px 16px">+</button>
+      </div>
+
+      <!-- Import tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button class="tab-btn active" id="tab-excel" onclick="switchTab('excel')">📊 Excel / CSV</button>
+        <button class="tab-btn" id="tab-photo" onclick="switchTab('photo')">📷 Фото</button>
+      </div>
+
+      <!-- Excel import -->
+      <div id="import-excel">
+        <div class="upload-zone" onclick="document.getElementById('excel-input').click()">
+          <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcel(this)">
+          <div style="font-size:1.8rem;margin-bottom:6px">📊</div>
+          <div style="font-size:.84rem;font-weight:700;margin-bottom:3px">Загрузить Excel или CSV</div>
+          <div style="font-size:.74rem;color:var(--muted)">Ситуации должны быть в первом столбце. Заголовок пропускается автоматически.</div>
+        </div>
+        <div id="excel-preview" style="display:none;margin-top:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:.78rem;color:var(--muted)" id="excel-preview-label"></div>
+            <button class="btn btn-green" onclick="importExcelSits()" style="padding:7px 16px;font-size:.72rem">✅ Импортировать всё</button>
+          </div>
+          <div id="excel-preview-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
+        </div>
+      </div>
+
+      <!-- Photo OCR import -->
+      <div id="import-photo" style="display:none">
+        <div class="upload-zone" onclick="document.getElementById('photo-sit-input').click()">
+          <input type="file" id="photo-sit-input" accept="image/*" multiple style="display:none" onchange="handleSitPhoto(this)">
+          <div style="font-size:1.8rem;margin-bottom:6px">📷</div>
+          <div style="font-size:.84rem;font-weight:700;margin-bottom:3px">Загрузить фото со списком ситуаций</div>
+          <div style="font-size:.74rem;color:var(--muted)">Система распознает текст и создаст карточки. Каждая строка = отдельная ситуация.</div>
+        </div>
+        <div id="ocr-status" style="display:none;margin-top:10px;text-align:center">
+          <div style="font-size:.84rem;color:var(--accent2);margin-bottom:6px" id="ocr-status-text">Распознаю текст...</div>
+          <div style="height:4px;background:var(--card2);border-radius:2px;overflow:hidden">
+            <div id="ocr-bar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0;transition:width .3s"></div>
+          </div>
+        </div>
+        <div id="ocr-preview" style="display:none;margin-top:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:.78rem;color:var(--muted)" id="ocr-preview-label"></div>
+            <button class="btn btn-green" onclick="importOcrSits()" style="padding:7px 16px;font-size:.72rem">✅ Импортировать всё</button>
+          </div>
+          <div id="ocr-preview-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
+        </div>
+      </div>
+
+      <!-- Situation list -->
+      <div style="height:1px;background:var(--border);margin:14px 0"></div>
+      <div class="sit-list" id="sit-list">
+        <div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SQL MODAL -->
+<div id="sql-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto">
+    <h2 style="font-family:'Unbounded',sans-serif;font-size:.95rem;margin-bottom:14px">📋 SQL для создания таблиц</h2>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:12px">Скопируй и выполни в Supabase → SQL Editor → New query</p>
+    <pre id="sql-code" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:.76rem;line-height:1.6;overflow-x:auto;white-space:pre-wrap;color:#a0f0a0"></pre>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="copySQL()">📋 Скопировать SQL</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('sql-modal').style.display='none'">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SQL_SETUP = `-- Таблица ситуаций
+create table if not exists situations (
+  id bigserial primary key,
+  text text not null,
+  active boolean default true,
+  created_at timestamptz default now()
+);
+
+-- Таблица мемов
+create table if not exists memes (
+  id bigserial primary key,
+  title text not null,
+  image_url text not null,
+  active boolean default true,
+  created_at timestamptz default now()
+);
+
+-- Включить Row Level Security и разрешить чтение всем
+alter table situations enable row level security;
+alter table memes enable row level security;
+
+create policy "public read situations" on situations for select using (true);
+create policy "public read memes" on memes for select using (true);
+create policy "public insert situations" on situations for insert with check (true);
+create policy "public update situations" on situations for update using (true);
+create policy "public delete situations" on situations for delete using (true);
+create policy "public insert memes" on memes for insert with check (true);
+create policy "public update memes" on memes for update using (true);
+create policy "public delete memes" on memes for delete using (true);
+
+-- Создать Storage bucket для мемов
+insert into storage.buckets (id, name, public) 
+values ('memes', 'memes', true)
+on conflict do nothing;
+
+create policy "public read memes storage" on storage.objects for select using (bucket_id = 'memes');
+create policy "public upload memes storage" on storage.objects for insert with check (bucket_id = 'memes');
+create policy "public delete memes storage" on storage.objects for delete using (bucket_id = 'memes');`;
+
+// ─────────────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────────────
+let CFG = { url:'', key:'' };
+
+window.onload = () => {
+  const saved = localStorage.getItem('mg_admin_cfg');
+  if(saved){ try{ CFG=JSON.parse(saved); }catch(e){} }
+  document.getElementById('cfg-url').value = CFG.url||'';
+  document.getElementById('cfg-key').value = CFG.key||'';
+  document.getElementById('sql-code').textContent = SQL_SETUP;
+  if(CFG.url && CFG.key) loadAll();
+  else setStatus('Не настроено','error');
+};
+
+function saveConfig(){
+  CFG.url = document.getElementById('cfg-url').value.trim().replace(/\/$/,'');
+  CFG.key = document.getElementById('cfg-key').value.trim();
+  localStorage.setItem('mg_admin_cfg', JSON.stringify(CFG));
+}
+
+function showSQL(){ document.getElementById('sql-modal').style.display='flex'; }
+function copySQL(){
+  navigator.clipboard.writeText(SQL_SETUP).then(()=>toast('SQL скопирован!','success'));
+}
+
+// ─────────────────────────────────────────────
+//  API
+// ─────────────────────────────────────────────
+async function api(path, opts={}) {
+  const r = await fetch(`${CFG.url}/rest/v1/${path}`, {
+    headers:{
+      'apikey':CFG.key,'Authorization':`Bearer ${CFG.key}`,
+      'Content-Type':'application/json','Prefer':'return=representation',
+      ...opts.headers
+    }, ...opts
+  });
+  const text = await r.text();
+  if(!r.ok) throw new Error(text);
+  return text ? JSON.parse(text) : null;
+}
+
+async function storageUpload(filename, file) {
+  const r = await fetch(`${CFG.url}/storage/v1/object/memes/${filename}`, {
+    method:'POST',
+    headers:{'apikey':CFG.key,'Authorization':`Bearer ${CFG.key}`,'Content-Type':file.type},
+    body:file
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return `${CFG.url}/storage/v1/object/public/memes/${filename}`;
+}
+
+async function storageDelete(filename) {
+  await fetch(`${CFG.url}/storage/v1/object/memes/${filename}`, {
+    method:'DELETE',
+    headers:{'apikey':CFG.key,'Authorization':`Bearer ${CFG.key}`}
+  });
+}
+
+// ─────────────────────────────────────────────
+//  CONNECTION TEST
+// ─────────────────────────────────────────────
+async function testConnection(){
+  setStatus('Проверка...','loading');
+  try {
+    await api('situations?limit=1');
+    setStatus('Подключено ✓','ok');
+    toast('Подключение успешно! ✓','success');
+    loadAll();
+  } catch(e) {
+    setStatus('Ошибка','error');
+    toast(`Ошибка: ${e.message}`,'error');
+  }
+}
+
+function setStatus(text, type){
+  const el = document.getElementById('db-status');
+  el.textContent = text;
+  el.className = `status-chip ${type}`;
+}
+
+// ─────────────────────────────────────────────
+//  LOAD
+// ─────────────────────────────────────────────
+async function loadAll(){
+  if(!CFG.url||!CFG.key){ setStatus('Не настроено','error'); return; }
+  setStatus('Загрузка...','loading');
+  try {
+    const [memes, sits] = await Promise.all([
+      api('memes?select=*&order=id.desc'),
+      api('situations?select=*&order=id.desc')
+    ]);
+    renderMemes(memes||[]);
+    renderSituations(sits||[]);
+    setStatus('Подключено ✓','ok');
+  } catch(e) {
+    setStatus('Ошибка','error');
+    toast(`Ошибка загрузки: ${e.message}`,'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  MEMES
+// ─────────────────────────────────────────────
+let _memes = [];
+function renderMemes(memes){
+  _memes = memes;
+  document.getElementById('meme-count').textContent = memes.filter(m=>m.active).length + ' / ' + memes.length;
+  const grid = document.getElementById('meme-grid');
+  if(!memes.length){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Нет мемов. Загрузи первый!</div>'; return; }
+  grid.innerHTML = memes.map(m=>`
+    <div class="meme-item ${m.active?'':'inactive'}" id="meme-${m.id}">
+      <img src="${m.image_url}" alt="${m.title}" loading="lazy" onerror="this.style.background='#1a1a20';this.style.height='90px'">
+      <div class="meme-item-footer">
+        <div class="meme-item-title" title="${m.title}">${m.title}</div>
+        <button class="meme-del-btn" onclick="toggleMeme(${m.id},${m.active})" title="${m.active?'Скрыть':'Показать'}">${m.active?'👁':'🚫'}</button>
+        <button class="meme-del-btn" onclick="deleteMeme(${m.id},'${m.image_url}')" title="Удалить">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function uploadMemes(input){
+  if(!CFG.url||!CFG.key){ toast('Сначала настрой подключение!','error'); return; }
+  const files = Array.from(input.files);
+  if(!files.length) return;
+
+  const prog = document.getElementById('upload-progress');
+  const bar = document.getElementById('upload-progress-bar');
+  prog.style.display='block'; bar.style.width='0';
+
+  let done=0;
+  for(const file of files){
+    try {
+      const filename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const url = await storageUpload(filename, file);
+      const title = file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');
+      await api('memes', { method:'POST', body:JSON.stringify({title, image_url:url, active:true}) });
+      done++;
+      bar.style.width = `${(done/files.length)*100}%`;
+    } catch(e) {
+      toast(`Ошибка загрузки ${file.name}: ${e.message}`,'error');
+    }
+  }
+  setTimeout(()=>{ prog.style.display='none'; bar.style.width='0'; },800);
+  input.value='';
+  toast(`Загружено ${done}/${files.length} мемов ✓`,'success');
+  await loadAll();
+}
+
+async function toggleMeme(id, active){
+  try {
+    await api(`memes?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({active:!active})});
+    toast(active?'Мем скрыт':'Мем активирован','success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
+async function deleteMeme(id, imageUrl){
+  if(!confirm('Удалить мем?')) return;
+  try {
+    await api(`memes?id=eq.${id}`,{method:'DELETE'});
+    // Try delete from storage
+    try {
+      const path = imageUrl.split('/memes/')[1];
+      if(path) await storageDelete(path);
+    } catch(e){}
+    toast('Мем удалён','success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
+// ─────────────────────────────────────────────
+//  SITUATIONS — manual
+// ─────────────────────────────────────────────
+let _sits = [];
+function renderSituations(sits){
+  _sits = sits;
+  document.getElementById('sit-count').textContent = sits.filter(s=>s.active).length + ' / ' + sits.length;
+  const list = document.getElementById('sit-list');
+  if(!sits.length){ list.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Нет ситуаций. Добавь первую!</div>'; return; }
+  list.innerHTML = sits.map(s=>`
+    <div class="sit-item ${s.active?'':'inactive'}">
+      <div class="sit-text">${s.text}</div>
+      <div class="sit-actions">
+        <span class="${s.active?'badge-active':'badge-inactive'}">${s.active?'ON':'OFF'}</span>
+        <button class="sit-toggle-btn" onclick="toggleSit(${s.id},${s.active})" title="${s.active?'Скрыть':'Показать'}">${s.active?'👁':'🚫'}</button>
+        <button class="sit-del-btn" onclick="deleteSit(${s.id})" title="Удалить">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addSituation(){
+  const inp = document.getElementById('sit-input');
+  const text = inp.value.trim();
+  if(!text){ toast('Введи текст ситуации!','error'); return; }
+  if(!CFG.url||!CFG.key){ toast('Сначала настрой подключение!','error'); return; }
+  try {
+    await api('situations',{method:'POST',body:JSON.stringify({text,active:true})});
+    inp.value='';
+    toast('Ситуация добавлена ✓','success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
+async function saveSituationsBatch(lines){
+  if(!CFG.url||!CFG.key){ toast('Сначала настрой подключение!','error'); return false; }
+  const rows = lines.map(text=>({text,active:true}));
+  await api('situations',{method:'POST',body:JSON.stringify(rows)});
+  return true;
+}
+
+async function toggleSit(id, active){
+  try {
+    await api(`situations?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({active:!active})});
+    toast(active?'Ситуация скрыта':'Ситуация активирована','success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
+async function deleteSit(id){
+  if(!confirm('Удалить ситуацию?')) return;
+  try {
+    await api(`situations?id=eq.${id}`,{method:'DELETE'});
+    toast('Ситуация удалена','success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
+// ─────────────────────────────────────────────
+//  TABS
+// ─────────────────────────────────────────────
+function switchTab(tab){
+  document.getElementById('import-excel').style.display = tab==='excel' ? 'block' : 'none';
+  document.getElementById('import-photo').style.display = tab==='photo' ? 'block' : 'none';
+  document.getElementById('tab-excel').classList.toggle('active', tab==='excel');
+  document.getElementById('tab-photo').classList.toggle('active', tab==='photo');
+}
+
+// ─────────────────────────────────────────────
+//  EXCEL / CSV IMPORT
+// ─────────────────────────────────────────────
+let _excelLines = [];
+
+function handleExcel(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let lines = [];
+      if(file.name.endsWith('.csv')){
+        // CSV: split by newlines, take first column
+        const text = new TextDecoder('utf-8').decode(new Uint8Array(e.target.result));
+        lines = text.split('\n')
+          .map(l => l.split(/[;,]/)[0].replace(/^["']|["']$/g,'').trim())
+          .filter(l => l.length > 3);
+      } else {
+        // XLSX
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        lines = rows
+          .map(r => String(r[0]||'').trim())
+          .filter(l => l.length > 3);
+      }
+      // Skip header if looks like one (short word, no spaces)
+      if(lines.length && lines[0].split(' ').length === 1 && lines[0].length < 20){
+        lines.shift();
+      }
+      showExcelPreview(lines);
+      input.value='';
+    } catch(err){
+      toast(`Ошибка чтения файла: ${err.message}`,'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showExcelPreview(lines){
+  _excelLines = lines;
+  const preview = document.getElementById('excel-preview');
+  const label = document.getElementById('excel-preview-label');
+  const list = document.getElementById('excel-preview-list');
+  if(!lines.length){ toast('Не удалось найти ситуации в файле','error'); return; }
+  label.textContent = `Найдено ${lines.length} ситуаций — снимите галочку чтобы исключить`;
+  list.innerHTML = lines.map((l,i)=>`
+    <div class="preview-sit-item" id="ep-${i}">
+      <input type="checkbox" class="preview-sit-check" checked onchange="toggleExcelItem(${i},this)">
+      <span>${l}</span>
+    </div>`).join('');
+  preview.style.display = 'block';
+}
+
+function toggleExcelItem(i, cb){
+  document.getElementById(`ep-${i}`).classList.toggle('excluded', !cb.checked);
+}
+
+async function importExcelSits(){
+  const checked = _excelLines.filter((_,i)=>{
+    const cb = document.querySelector(`#ep-${i} input`);
+    return cb && cb.checked;
+  });
+  if(!checked.length){ toast('Нет выбранных ситуаций','error'); return; }
+  try {
+    await saveSituationsBatch(checked);
+    document.getElementById('excel-preview').style.display='none';
+    _excelLines=[];
+    toast(`Импортировано ${checked.length} ситуаций ✓`,'success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
+// ─────────────────────────────────────────────
+//  PHOTO OCR IMPORT
+// ─────────────────────────────────────────────
+let _ocrLines = [];
+
+async function handleSitPhoto(input){
+  const files = Array.from(input.files); if(!files.length) return;
+  const statusBox = document.getElementById('ocr-status');
+  const statusText = document.getElementById('ocr-status-text');
+  const bar = document.getElementById('ocr-bar');
+  const preview = document.getElementById('ocr-preview');
+  preview.style.display='none';
+  statusBox.style.display='block';
+  _ocrLines=[];
+
+  const worker = await Tesseract.createWorker('rus+eng', 1, {
+    logger: m => {
+      if(m.status==='recognizing text'){
+        bar.style.width = Math.round(m.progress*100)+'%';
+        statusText.textContent = `Распознаю... ${Math.round(m.progress*100)}%`;
+      }
+    }
+  });
+
+  for(let i=0; i<files.length; i++){
+    statusText.textContent = `Файл ${i+1}/${files.length} — распознаю...`;
+    bar.style.width='0';
+    const { data: { text } } = await worker.recognize(files[i]);
+    const lines = text.split('\n')
+      .map(l=>l.trim())
+      .filter(l=>l.length>5 && !/^\d+$/.test(l)); // skip empty & pure numbers
+    _ocrLines.push(...lines);
+  }
+  await worker.terminate();
+
+  statusBox.style.display='none';
+  input.value='';
+  showOcrPreview(_ocrLines);
+}
+
+function showOcrPreview(lines){
+  const preview = document.getElementById('ocr-preview');
+  const label = document.getElementById('ocr-preview-label');
+  const list = document.getElementById('ocr-preview-list');
+  if(!lines.length){ toast('Текст не распознан. Попробуй фото с более чётким текстом.','error'); return; }
+  label.textContent = `Распознано ${lines.length} строк — снимите галочку чтобы исключить`;
+  list.innerHTML = lines.map((l,i)=>`
+    <div class="preview-sit-item" id="op-${i}">
+      <input type="checkbox" class="preview-sit-check" checked onchange="toggleOcrItem(${i},this)">
+      <span>${l}</span>
+    </div>`).join('');
+  preview.style.display='block';
+}
+
+function toggleOcrItem(i, cb){
+  document.getElementById(`op-${i}`).classList.toggle('excluded', !cb.checked);
+}
+
+async function importOcrSits(){
+  const checked = _ocrLines.filter((_,i)=>{
+    const cb = document.querySelector(`#op-${i} input`);
+    return cb && cb.checked;
+  });
+  if(!checked.length){ toast('Нет выбранных строк','error'); return; }
+  try {
+    await saveSituationsBatch(checked);
+    document.getElementById('ocr-preview').style.display='none';
+    _ocrLines=[];
+    toast(`Импортировано ${checked.length} ситуаций ✓`,'success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
+// ─────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────
+let _toastTm;
+function toast(msg, type=''){
+  clearTimeout(_toastTm);
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`toast show ${type}`;
+  _toastTm=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// Enter key for situation input
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey&&document.getElementById('sit-input')===document.activeElement){
+    e.preventDefault(); addSituation();
+  }
+});
+</script>
+</body>
+</html>
