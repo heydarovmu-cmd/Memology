@@ -567,48 +567,45 @@ function parseCSV(text) {
 }
 
 function extractSituations(rows) {
-  // Detect structure: horizontal cards (Карта 1, Карта 2...)
-  // Row 0: card names at every 2nd column (col 0, 2, 4...)
-  // Rows 1-N: situations in col 0, 2, 4... of each card block
-  // Empty rows separate card groups
-
   const situations = [];
-  const isCardFormat = rows.length > 0 &&
-    rows[0].some(cell => /карта\s*\d+/i.test(String(cell)));
+  const isCardFormat = rows.some(row =>
+    row.some(cell => /карта\s*\d+/i.test(String(cell)))
+  );
 
   if(isCardFormat) {
-    // Find card header rows (rows containing "Карта N")
     for(let r=0; r<rows.length; r++){
       const row = rows[r];
       const isHeader = row.some(cell => /карта\s*\d+/i.test(String(cell)));
-      if(isHeader) {
-        // Find which columns have card names
-        const cardCols = [];
-        for(let c=0;c<row.length;c++){
-          if(/карта\s*\d+/i.test(String(row[c]))) cardCols.push(c);
-        }
-        // Read situation rows below this header (skip empty rows)
-        let dataRow = r+1;
-        while(dataRow < rows.length) {
-          const drow = rows[dataRow];
-          // Stop if this row is another header or all empty
-          if(drow.every(c=>!String(c).trim())) { dataRow++; continue; }
-          if(drow.some(c=>/карта\s*\d+/i.test(String(c)))) break;
-          // Extract cell at each card column
-          for(const col of cardCols){
-            const val = String(drow[col]||'').trim();
-            if(val.length > 5) situations.push(val);
+      if(!isHeader) continue;
+
+      // Find which columns have card names
+      const cardCols = [];
+      for(let c=0;c<row.length;c++){
+        if(/карта\s*\d+/i.test(String(row[c]))) cardCols.push(c);
+      }
+
+      // Read all situation rows below this header until next header or end
+      let dataRow = r+1;
+      while(dataRow < rows.length) {
+        const drow = rows[dataRow];
+        // Stop if this row is another header
+        if(drow.some(c=>/карта\s*\d+/i.test(String(c)))) break;
+        // Extract cell at each card column
+        for(const col of cardCols){
+          const val = String(drow[col]||'').replace(/^["']|["']$/g,'').trim();
+          // Skip empty, too short, or card names
+          if(val.length > 8 && !/^карта\s*\d+$/i.test(val)) {
+            situations.push(val);
           }
-          dataRow++;
         }
-        r = dataRow - 1; // skip processed rows
+        dataRow++;
       }
     }
   } else {
     // Fallback: first column, each row is a situation
     for(const row of rows){
       const val = String(row[0]||'').trim();
-      if(val.length > 5 && !/карта/i.test(val)) situations.push(val);
+      if(val.length > 8 && !/карта/i.test(val)) situations.push(val);
     }
   }
   return situations;
