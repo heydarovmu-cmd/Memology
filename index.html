@@ -237,7 +237,10 @@ input[type=text]:focus{border-color:var(--accent3)}
     <p style="color:var(--muted);font-size:.83rem;margin-bottom:3px">Код для друзей:</p>
     <div class="room-code-box">
       <div class="room-code" id="lobby-code">????</div>
-      <button class="btn btn-secondary" onclick="copyCode()" style="padding:7px 18px;font-size:.68rem;margin-top:4px">📋 Скопировать</button>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+        <button class="btn btn-secondary" onclick="copyCode()" style="padding:7px 18px;font-size:.68rem">📋 Скопировать</button>
+        <button class="btn btn-primary" onclick="shareRoom()" style="padding:7px 18px;font-size:.68rem">🔗 Поделиться</button>
+      </div>
     </div>
     <div style="font-size:.76rem;color:var(--muted);margin-bottom:4px" id="lobby-rounds-label"></div>
     <div class="player-slots" id="lobby-slots" style="margin:10px auto"></div>
@@ -720,6 +723,17 @@ function renderLobbySlots(room){
   }
 }
 function copyCode(){ navigator.clipboard.writeText(S.roomCode).then(()=>toast('Код скопирован! 📋')).catch(()=>toast(S.roomCode)); }
+
+function shareRoom(){
+  const url = window.location.href.split('?')[0];
+  const text = `Присоединяйся к игре Memology!\nКод комнаты: ${S.roomCode}\nОткрой: ${url}`;
+  if(navigator.share){
+    navigator.share({ title:'Memology', text, url })
+      .catch(()=>{ navigator.clipboard.writeText(text); toast('Ссылка скопирована!'); });
+  } else {
+    navigator.clipboard.writeText(text).then(()=>toast('Приглашение скопировано! 📋')).catch(()=>toast(text));
+  }
+}
 
 // ═══════════════════════════════════════════════════
 //  START GAME (host)
