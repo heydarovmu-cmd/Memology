@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -101,6 +102,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--accent3)}
 <div style="max-width:1100px;margin:0 auto;padding:24px 20px">
 
   <!-- CONFIG -->
+
   <div class="config-panel">
     <div style="font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">⚙️ Настройка подключения</div>
     <p style="color:var(--muted);font-size:.82rem;margin-bottom:2px">Вставь ключи из Supabase Dashboard → Project Settings → API</p>
@@ -133,96 +135,100 @@ input[type=text]:focus,textarea:focus{border-color:var(--accent3)}
 
   <div class="container" style="padding:0;margin-bottom:24px">
 
-    <!-- MEMES -->
-    <div class="panel">
-      <div class="panel-title">
-        🖼️ Мемы
-        <span class="panel-count" id="meme-count">0</span>
-        <button class="btn btn-green" onclick="document.getElementById('meme-file-input').click()" style="margin-left:auto;padding:7px 16px;font-size:.7rem">+ Загрузить</button>
-        <input type="file" id="meme-file-input" accept="image/*" multiple style="display:none" onchange="uploadMemes(this)">
+```
+<!-- MEMES -->
+<div class="panel">
+  <div class="panel-title">
+    🖼️ Мемы
+    <span class="panel-count" id="meme-count">0</span>
+    <button class="btn btn-green" onclick="document.getElementById('meme-file-input').click()" style="margin-left:auto;padding:7px 16px;font-size:.7rem">+ Загрузить</button>
+    <input type="file" id="meme-file-input" accept="image/*" multiple style="display:none" onchange="uploadMemes(this)">
+  </div>
+  <div class="upload-progress" id="upload-progress">
+    <div class="upload-progress-bar" id="upload-progress-bar"></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:6px">
+    <input type="text" id="meme-title-input" placeholder="Название (необязательно, для следующей загрузки)..." style="font-size:.82rem">
+  </div>
+  <p style="font-size:.74rem;color:var(--muted);margin-bottom:4px">Название берётся из имени файла. Можно загрузить сразу много.</p>
+  <div class="meme-grid" id="meme-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
+  </div>
+</div>
+
+<!-- SITUATIONS -->
+<div class="panel">
+  <div class="panel-title">
+    💬 Ситуации
+    <span class="panel-count" id="sit-count">0</span>
+    <button class="btn btn-secondary" onclick="deleteAllSituations()" style="margin-left:auto;padding:5px 14px;font-size:.62rem;color:var(--accent);border-color:rgba(255,61,107,.3)">🗑 Удалить все</button>
+  </div>
+
+  <!-- Manual add -->
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <textarea id="sit-input" placeholder="Введи ситуацию вручную..." rows="2" style="resize:none;font-size:.88rem"></textarea>
+    <button class="btn btn-green" onclick="addSituation()" style="white-space:nowrap;align-self:flex-start;padding:11px 16px">+</button>
+  </div>
+
+  <!-- Import tabs -->
+  <div style="display:flex;gap:6px;margin-bottom:12px">
+    <button class="tab-btn active" id="tab-excel" onclick="switchTab('excel')">📊 Excel / CSV</button>
+    <button class="tab-btn" id="tab-photo" onclick="switchTab('photo')">📷 Фото</button>
+  </div>
+
+  <!-- Excel import -->
+  <div id="import-excel">
+    <div class="upload-zone" onclick="document.getElementById('excel-input').click()">
+      <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcel(this)">
+      <div style="font-size:1.8rem;margin-bottom:6px">📊</div>
+      <div style="font-size:.84rem;font-weight:700;margin-bottom:3px">Загрузить Excel или CSV</div>
+      <div style="font-size:.74rem;color:var(--muted)">Ситуации должны быть в первом столбце. Заголовок пропускается автоматически.</div>
+    </div>
+    <div id="excel-preview" style="display:none;margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:.78rem;color:var(--muted)" id="excel-preview-label"></div>
+        <button class="btn btn-green" onclick="importExcelSits()" style="padding:7px 16px;font-size:.72rem">✅ Импортировать всё</button>
       </div>
-      <div class="upload-progress" id="upload-progress">
-        <div class="upload-progress-bar" id="upload-progress-bar"></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:6px">
-        <input type="text" id="meme-title-input" placeholder="Название (необязательно, для следующей загрузки)..." style="font-size:.82rem">
-      </div>
-      <p style="font-size:.74rem;color:var(--muted);margin-bottom:4px">Название берётся из имени файла. Можно загрузить сразу много.</p>
-      <div class="meme-grid" id="meme-grid">
-        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
+      <div id="excel-preview-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
+    </div>
+  </div>
+
+  <!-- Photo OCR import -->
+  <div id="import-photo" style="display:none">
+    <div class="upload-zone" onclick="document.getElementById('photo-sit-input').click()">
+      <input type="file" id="photo-sit-input" accept="image/*" multiple style="display:none" onchange="handleSitPhoto(this)">
+      <div style="font-size:1.8rem;margin-bottom:6px">📷</div>
+      <div style="font-size:.84rem;font-weight:700;margin-bottom:3px">Загрузить фото со списком ситуаций</div>
+      <div style="font-size:.74rem;color:var(--muted)">Система распознает текст и создаст карточки. Каждая строка = отдельная ситуация.</div>
+    </div>
+    <div id="ocr-status" style="display:none;margin-top:10px;text-align:center">
+      <div style="font-size:.84rem;color:var(--accent2);margin-bottom:6px" id="ocr-status-text">Распознаю текст...</div>
+      <div style="height:4px;background:var(--card2);border-radius:2px;overflow:hidden">
+        <div id="ocr-bar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0;transition:width .3s"></div>
       </div>
     </div>
-
-    <!-- SITUATIONS -->
-    <div class="panel">
-      <div class="panel-title">
-        💬 Ситуации
-        <span class="panel-count" id="sit-count">0</span>
+    <div id="ocr-preview" style="display:none;margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:.78rem;color:var(--muted)" id="ocr-preview-label"></div>
+        <button class="btn btn-green" onclick="importOcrSits()" style="padding:7px 16px;font-size:.72rem">✅ Импортировать всё</button>
       </div>
-
-      <!-- Manual add -->
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <textarea id="sit-input" placeholder="Введи ситуацию вручную..." rows="2" style="resize:none;font-size:.88rem"></textarea>
-        <button class="btn btn-green" onclick="addSituation()" style="white-space:nowrap;align-self:flex-start;padding:11px 16px">+</button>
-      </div>
-
-      <!-- Import tabs -->
-      <div style="display:flex;gap:6px;margin-bottom:12px">
-        <button class="tab-btn active" id="tab-excel" onclick="switchTab('excel')">📊 Excel / CSV</button>
-        <button class="tab-btn" id="tab-photo" onclick="switchTab('photo')">📷 Фото</button>
-      </div>
-
-      <!-- Excel import -->
-      <div id="import-excel">
-        <div class="upload-zone" onclick="document.getElementById('excel-input').click()">
-          <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcel(this)">
-          <div style="font-size:1.8rem;margin-bottom:6px">📊</div>
-          <div style="font-size:.84rem;font-weight:700;margin-bottom:3px">Загрузить Excel или CSV</div>
-          <div style="font-size:.74rem;color:var(--muted)">Ситуации должны быть в первом столбце. Заголовок пропускается автоматически.</div>
-        </div>
-        <div id="excel-preview" style="display:none;margin-top:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:.78rem;color:var(--muted)" id="excel-preview-label"></div>
-            <button class="btn btn-green" onclick="importExcelSits()" style="padding:7px 16px;font-size:.72rem">✅ Импортировать всё</button>
-          </div>
-          <div id="excel-preview-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-        </div>
-      </div>
-
-      <!-- Photo OCR import -->
-      <div id="import-photo" style="display:none">
-        <div class="upload-zone" onclick="document.getElementById('photo-sit-input').click()">
-          <input type="file" id="photo-sit-input" accept="image/*" multiple style="display:none" onchange="handleSitPhoto(this)">
-          <div style="font-size:1.8rem;margin-bottom:6px">📷</div>
-          <div style="font-size:.84rem;font-weight:700;margin-bottom:3px">Загрузить фото со списком ситуаций</div>
-          <div style="font-size:.74rem;color:var(--muted)">Система распознает текст и создаст карточки. Каждая строка = отдельная ситуация.</div>
-        </div>
-        <div id="ocr-status" style="display:none;margin-top:10px;text-align:center">
-          <div style="font-size:.84rem;color:var(--accent2);margin-bottom:6px" id="ocr-status-text">Распознаю текст...</div>
-          <div style="height:4px;background:var(--card2);border-radius:2px;overflow:hidden">
-            <div id="ocr-bar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:0;transition:width .3s"></div>
-          </div>
-        </div>
-        <div id="ocr-preview" style="display:none;margin-top:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:.78rem;color:var(--muted)" id="ocr-preview-label"></div>
-            <button class="btn btn-green" onclick="importOcrSits()" style="padding:7px 16px;font-size:.72rem">✅ Импортировать всё</button>
-          </div>
-          <div id="ocr-preview-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
-        </div>
-      </div>
-
-      <!-- Situation list -->
-      <div style="height:1px;background:var(--border);margin:14px 0"></div>
-      <div class="sit-list" id="sit-list">
-        <div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
-      </div>
+      <div id="ocr-preview-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
     </div>
+  </div>
+
+  <!-- Situation list -->
+  <div style="height:1px;background:var(--border);margin:14px 0"></div>
+  <div class="sit-list" id="sit-list">
+    <div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
+  </div>
+</div>
+```
 
   </div>
 </div>
 
 <!-- SQL MODAL -->
+
 <div id="sql-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto">
     <h2 style="font-family:'Unbounded',sans-serif;font-size:.95rem;margin-bottom:14px">📋 SQL для создания таблиц</h2>
@@ -505,6 +511,16 @@ async function deleteSit(id){
   } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
 }
 
+async function deleteAllSituations(){
+  if(!confirm(`Удалить ВСЕ ${_sits.length} ситуаций? Это нельзя отменить!`)) return;
+  if(!confirm('Ты уверен? Все ситуации будут удалены безвозвратно.')) return;
+  try {
+    await api('situations?id=gt.0',{method:'DELETE'});
+    toast('Все ситуации удалены','success');
+    loadAll();
+  } catch(e){ toast(`Ошибка: ${e.message}`,'error'); }
+}
+
 // ─────────────────────────────────────────────
 //  TABS
 // ─────────────────────────────────────────────
@@ -736,5 +752,6 @@ document.addEventListener('keydown',e=>{
   }
 });
 </script>
+
 </body>
 </html>
