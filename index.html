@@ -135,6 +135,40 @@ input[type=text]:focus{border-color:var(--accent3)}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--card)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+/* HAMBURGER MENU */
+.hamburger-btn{position:fixed;top:14px;left:14px;z-index:300;background:rgba(15,15,18,.85);border:1px solid var(--border);border-radius:10px;width:40px;height:40px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;backdrop-filter:blur(8px)}
+.hamburger-btn.visible{display:flex}
+.hamburger-btn span{display:block;width:18px;height:2px;background:var(--text);border-radius:2px;transition:all .2s}
+.side-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;opacity:0;pointer-events:none;transition:opacity .25s}
+.side-menu-overlay.open{opacity:1;pointer-events:all}
+.side-menu{position:fixed;top:0;left:-280px;width:260px;height:100%;background:var(--card);border-right:1px solid var(--border);z-index:401;transition:left .25s;padding:60px 0 20px;display:flex;flex-direction:column}
+.side-menu.open{left:0}
+.side-menu-header{padding:0 20px 16px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.side-menu-title{font-family:'Unbounded',sans-serif;font-size:.9rem;font-weight:900;color:var(--accent)}
+.side-menu-room{font-size:.72rem;color:var(--muted);margin-top:3px}
+.side-menu-item{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;transition:background .15s;font-weight:600;font-size:.88rem;border:none;background:none;color:var(--text);width:100%;text-align:left}
+.side-menu-item:hover{background:var(--card2)}
+.side-menu-item.danger{color:var(--accent)}
+.side-menu-item-icon{font-size:1.1rem;width:24px;text-align:center}
+/* SUGGEST MODAL */
+.suggest-options{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.suggest-opt{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;font-weight:700;font-size:.88rem;color:var(--text);transition:all .2s}
+.suggest-opt:hover{border-color:var(--accent3);background:rgba(0,229,255,.06)}
+.suggest-opt-icon{font-size:1.3rem}
+.poker-table-wrap{display:flex;justify-content:center;align-items:center;margin:14px 0;min-height:220px}
+.poker-table{position:relative;width:min(460px,90vw);height:200px}
+.poker-table::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,#1a3a1a,#0d220d);border:3px solid #2d5a2d;border-radius:100px;box-shadow:0 0 40px rgba(0,0,0,.6),inset 0 0 30px rgba(0,0,0,.4)}
+.poker-seat{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;transform:translate(-50%,-50%);z-index:2}
+.seat-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border:2px solid var(--border);background:var(--card2);transition:all .3s}
+.seat-avatar.me{border-color:var(--accent3);box-shadow:0 0 14px rgba(0,229,255,.4)}
+.seat-avatar.reader-seat{border-color:var(--purple);box-shadow:0 0 14px rgba(168,85,247,.4)}
+.seat-avatar.done{border-color:var(--green);box-shadow:0 0 10px rgba(0,201,122,.3)}
+.seat-avatar.thinking{border-color:var(--accent2);animation:pulse 1.2s infinite}
+.seat-name{font-size:.6rem;font-weight:700;color:var(--text);max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(10,10,12,.85);padding:2px 7px;border-radius:8px}
+.seat-status{font-size:.55rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:6px}
+.seat-status.done{color:var(--green)}
+.seat-status.thinking{color:var(--accent2)}
+.seat-status.reader-lbl{color:var(--purple)}
 /* CONFETTI */
 .confetti-container{position:fixed;inset:0;pointer-events:none;z-index:500;overflow:hidden}
 .confetti-piece{position:absolute;top:-20px;animation:fall linear forwards}
@@ -142,6 +176,65 @@ input[type=text]:focus{border-color:var(--accent3)}
 </style>
 </head>
 <body>
+
+<!-- HAMBURGER BUTTON -->
+
+<button class="hamburger-btn" id="hamburger-btn" onclick="toggleMenu()">
+  <span></span><span></span><span></span>
+</button>
+
+<!-- SIDE MENU OVERLAY -->
+
+<div class="side-menu-overlay" id="menu-overlay" onclick="closeMenu()"></div>
+
+<!-- SIDE MENU -->
+
+<div class="side-menu" id="side-menu">
+  <div class="side-menu-header">
+    <div class="side-menu-title">Memology 🎭</div>
+    <div class="side-menu-room" id="menu-room-info">Комната: —</div>
+  </div>
+  <button class="side-menu-item" onclick="openSuggest()">
+    <span class="side-menu-item-icon">💡</span> Предложить
+  </button>
+  <button class="side-menu-item danger" onclick="leaveGame()">
+    <span class="side-menu-item-icon">🚪</span> Выйти из игры
+  </button>
+</div>
+
+<!-- SUGGEST MODAL -->
+
+<div class="modal-overlay" id="modal-suggest" onclick="if(event.target===this)closeModal('modal-suggest')">
+  <div class="modal-box" style="max-width:380px">
+    <h3 style="font-size:1rem;margin-bottom:6px">💡 Предложить</h3>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:4px">Что хочешь предложить?</p>
+    <div id="suggest-step1">
+      <div class="suggest-options">
+        <button class="suggest-opt" onclick="openSuggestForm('situation')">
+          <span class="suggest-opt-icon">📋</span>
+          <div><div style="font-weight:700">Предложить ситуацию</div><div style="font-size:.74rem;color:var(--muted);font-weight:400;margin-top:2px">Новая карточка для игры</div></div>
+        </button>
+        <button class="suggest-opt" onclick="openSuggestForm('meme')">
+          <span class="suggest-opt-icon">🖼️</span>
+          <div><div style="font-weight:700">Предложить мем</div><div style="font-size:.74rem;color:var(--muted);font-weight:400;margin-top:2px">Ссылка или описание</div></div>
+        </button>
+        <button class="suggest-opt" onclick="openSuggestForm('other')">
+          <span class="suggest-opt-icon">✏️</span>
+          <div><div style="font-weight:700">Другое</div><div style="font-size:.74rem;color:var(--muted);font-weight:400;margin-top:2px">Любое предложение</div></div>
+        </button>
+      </div>
+    </div>
+    <div id="suggest-step2" style="display:none">
+      <div style="font-size:.78rem;color:var(--accent3);margin-bottom:10px;font-weight:700" id="suggest-form-label"></div>
+      <textarea id="suggest-text" placeholder="Напиши здесь..." rows="4" style="font-size:.85rem;resize:none"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-secondary" onclick="backSuggest()" style="flex:1;justify-content:center">← Назад</button>
+        <button class="btn btn-green" onclick="submitSuggest()" style="flex:1;justify-content:center">📨 Отправить</button>
+      </div>
+    </div>
+    <button class="btn btn-secondary" onclick="closeModal('modal-suggest')" style="width:100%;justify-content:center;margin-top:12px">Отмена</button>
+  </div>
+</div>
 
 <!-- WELCOME -->
 
@@ -162,9 +255,42 @@ input[type=text]:focus{border-color:var(--accent3)}
   <button class="btn btn-primary" onclick="showScreen('screen-create')" style="font-size:.95rem;padding:15px 42px">🏠 Создать комнату</button>
   <button class="btn btn-cyan" onclick="showScreen('screen-join')" style="font-size:.95rem;padding:15px 42px">🔗 Войти в комнату</button>
   <button class="btn btn-secondary" onclick="openModal('modal-howto')">📖 Как играть</button>
+  <button onclick="showAdminEntry()" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:8px;margin-top:4px;opacity:.3">⚙️</button>
 </div>
 ```
 
+  </div>
+</div>
+
+<!-- ADMIN PIN -->
+
+<div class="screen" id="screen-admin-pin">
+  <div class="panel" style="max-width:320px;text-align:center">
+    <div style="font-size:2rem;margin-bottom:10px">🔐</div>
+    <h2 style="font-size:1rem;margin-bottom:6px">Администратор</h2>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:20px">Введи PIN-код</p>
+    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:22px">
+      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d0"></div>
+      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d1"></div>
+      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d2"></div>
+      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d3"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:220px;margin:0 auto 14px">
+      <button class="num-btn" onclick="pinPress('1')" style="height:52px;font-size:1.2rem">1</button>
+      <button class="num-btn" onclick="pinPress('2')" style="height:52px;font-size:1.2rem">2</button>
+      <button class="num-btn" onclick="pinPress('3')" style="height:52px;font-size:1.2rem">3</button>
+      <button class="num-btn" onclick="pinPress('4')" style="height:52px;font-size:1.2rem">4</button>
+      <button class="num-btn" onclick="pinPress('5')" style="height:52px;font-size:1.2rem">5</button>
+      <button class="num-btn" onclick="pinPress('6')" style="height:52px;font-size:1.2rem">6</button>
+      <button class="num-btn" onclick="pinPress('7')" style="height:52px;font-size:1.2rem">7</button>
+      <button class="num-btn" onclick="pinPress('8')" style="height:52px;font-size:1.2rem">8</button>
+      <button class="num-btn" onclick="pinPress('9')" style="height:52px;font-size:1.2rem">9</button>
+      <button class="num-btn" onclick="pinClear()" style="height:52px;font-size:.85rem;color:var(--muted)">C</button>
+      <button class="num-btn" onclick="pinPress('0')" style="height:52px;font-size:1.2rem">0</button>
+      <button class="num-btn" onclick="pinBack()" style="height:52px;font-size:1rem">⌫</button>
+    </div>
+    <div style="color:var(--accent);font-size:.8rem;min-height:18px;margin-bottom:10px" id="pin-error"></div>
+    <button class="btn btn-secondary" onclick="showScreen('screen-welcome')" style="width:100%;justify-content:center">← Назад</button>
   </div>
 </div>
 
@@ -288,11 +414,11 @@ input[type=text]:focus{border-color:var(--accent3)}
   </div>
 </div>
 
-<!-- PICK MEME -->
+<!-- PICK MEME — POKER TABLE -->
 
-<div class="screen" id="screen-pick">
-  <div style="width:100%;max-width:660px">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap">
+<div class="screen" id="screen-pick" style="justify-content:flex-start;padding-top:16px">
+  <div style="width:100%;max-width:700px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap">
       <div class="round-badge" id="pick-round-badge">РАУНД 1</div>
       <div class="phase-badge" style="background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.35);color:var(--accent2)">ВЫБЕРИ МЕМ</div>
     </div>
@@ -300,36 +426,54 @@ input[type=text]:focus{border-color:var(--accent3)}
       <div class="sit-display-label">📋 Ситуация раунда</div>
       <div class="sit-display-text" id="pick-sit-text">—</div>
     </div>
-    <p style="color:var(--muted);font-size:.83rem;margin-bottom:13px;text-align:center">Выбери мем из своих 5 карт:</p>
+    <!-- Poker table -->
+    <div class="poker-table-wrap">
+      <div class="poker-table" id="poker-table"></div>
+    </div>
+    <!-- My hand -->
+    <p style="color:var(--muted);font-size:.8rem;margin-bottom:10px;text-align:center">🃏 Твои карты — выбери одну:</p>
     <div class="hand-area" id="pick-hand"></div>
-    <div style="margin-top:18px;text-align:center">
+    <div style="margin-top:16px;text-align:center">
       <button class="btn btn-primary" id="submit-btn" onclick="submitMeme()" disabled>✅ Отправить мем</button>
     </div>
   </div>
 </div>
 
-<!-- WAITING OTHERS -->
+<!-- WAITING OTHERS — POKER TABLE -->
 
-<div class="screen" id="screen-waiting-others">
-  <div style="text-align:center;max-width:390px;width:100%">
-    <div style="font-size:2.8rem;margin-bottom:11px">✅</div>
-    <h2 style="font-size:1.05rem;margin-bottom:8px">Мем отправлен!</h2>
-    <p style="color:var(--muted);font-size:.85rem;margin-bottom:18px">Ждём остальных...</p>
-    <div class="status-list" id="waiting-status-list"></div>
+<div class="screen" id="screen-waiting-others" style="justify-content:flex-start;padding-top:16px">
+  <div style="width:100%;max-width:700px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+      <div class="round-badge" id="waiting-round-badge">РАУНД 1</div>
+      <div class="phase-badge" style="background:rgba(0,201,122,.1);border:1px solid rgba(0,201,122,.3);color:var(--green)">МЕМ ОТПРАВЛЕН ✅</div>
+    </div>
+    <div class="sit-display">
+      <div class="sit-display-label">📋 Ситуация раунда</div>
+      <div class="sit-display-text" id="waiting-sit-text2">—</div>
+    </div>
+    <div class="poker-table-wrap">
+      <div class="poker-table" id="poker-table-waiting"></div>
+    </div>
+    <p style="color:var(--muted);font-size:.8rem;text-align:center;margin-top:8px" class="pulsing">Ждём остальных игроков...</p>
   </div>
 </div>
 
-<!-- READER WAITS -->
+<!-- READER WAITS — POKER TABLE -->
 
-<div class="screen" id="screen-reader-wait">
-  <div style="text-align:center;max-width:390px;width:100%">
-    <div style="font-size:2.6rem;margin-bottom:12px" class="pulsing">🎤</div>
-    <h2 style="font-size:1.05rem;margin-bottom:10px">Участники выбирают...</h2>
-    <div class="sit-display" style="margin:13px 0;text-align:left">
-      <div class="sit-display-label">Ты зачитал</div>
+<div class="screen" id="screen-reader-wait" style="justify-content:flex-start;padding-top:16px">
+  <div style="width:100%;max-width:700px">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+      <div class="round-badge" id="reader-wait-round-badge">РАУНД 1</div>
+      <div class="phase-badge" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);color:var(--purple)">🎤 ТЫ ЧИТАЕШЬ</div>
+    </div>
+    <div class="sit-display" style="text-align:left">
+      <div class="sit-display-label">Ты зачитал ситуацию</div>
       <div class="sit-display-text" id="reader-wait-sit">—</div>
     </div>
-    <div class="status-list" id="reader-wait-status"></div>
+    <div class="poker-table-wrap">
+      <div class="poker-table" id="poker-table-reader"></div>
+    </div>
+    <p style="color:var(--muted);font-size:.8rem;text-align:center;margin-top:8px" class="pulsing">Участники выбирают мемы...</p>
   </div>
 </div>
 
@@ -551,13 +695,39 @@ const S = {
   allSituations:[],
 };
 
+// ═══ ADMIN PIN ═══
+const ADMIN_PIN = '1234'; // ← Измени свой PIN здесь
+let _pin = '';
+
+function showAdminEntry(){ _pin=''; updatePinDots(); document.getElementById('pin-error').textContent=''; showScreen('screen-admin-pin'); }
+function pinPress(d){ if(_pin.length>=4) return; _pin+=d; updatePinDots(); if(_pin.length===4) setTimeout(checkPin,200); }
+function pinBack(){ _pin=_pin.slice(0,-1); updatePinDots(); }
+function pinClear(){ _pin=''; updatePinDots(); }
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const el=document.getElementById('pin-d'+i);
+    el.style.background=i<_pin.length?'var(--accent3)':'var(--border)';
+    el.style.transform=i<_pin.length?'scale(1.2)':'scale(1)';
+  }
+}
+function checkPin(){
+  if(_pin===ADMIN_PIN){ showScreen('screen-create'); }
+  else { document.getElementById('pin-error').textContent='Неверный PIN'; _pin=''; updatePinDots(); }
+}
+
+// ═══ ANIMAL AVATARS ═══
 const AVATARS=['🦊','🐼','🦁','🐸','🦋','🐙','🦄','🐻','🦅','🐯'];
 const COLORS=['#ff3d6b','#ffcc00','#00e5ff','#00c97a','#a855f7','#ff6b35','#0099dd','#e8427c','#34d399','#f59e0b'];
 
 // ═══════════════════════════════════════════════════
 //  UI UTILS
 // ═══════════════════════════════════════════════════
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const noMenu=['screen-welcome','screen-admin-pin','screen-create','screen-join'];
+  if(noMenu.includes(id)) hideHamburger();
+}
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 function toast(msg,dur=2600){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur)}
@@ -694,15 +864,17 @@ function showLobby(room){
   document.getElementById('lobby-host-controls').style.display=S.isHost?'block':'none';
   document.getElementById('lobby-guest-wait').style.display=S.isHost?'none':'block';
   renderLobbySlots(room);
+  showHamburger();
   showScreen('screen-lobby');
 }
 function renderLobbySlots(room){
   const max=room.maxPlayers||10;
   const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx);
+  const scores=room.scores||{};
   const filled=players.map(p=>`
     <div class="player-slot ${p.idx===S.myIdx?'me':''}">
       <div class="slot-avatar" style="background:${COLORS[p.idx]}18;color:${COLORS[p.idx]}">${AVATARS[p.idx]}</div>
-      <div class="slot-name">${p.name}</div>
+      <div class="slot-name">${p.name} <span style="color:var(--muted);font-size:.72rem;font-weight:400">(${scores[p.idx]||0} очк.)</span></div>
       ${p.idx===0?'<span class="slot-badge badge-host">Хост</span>':''}
       ${p.idx===S.myIdx?'<span class="slot-badge badge-you">Ты</span>':''}
     </div>`).join('');
@@ -838,6 +1010,7 @@ function showPickScreen(room){
       ${memeImg(m,78)}
       <div class="hand-card-title">${m.title}</div>
     </div>`).join('');
+  renderPokerTable('poker-table', room, 'pick');
   showScreen('screen-pick');
 }
 function selectCard(i){
@@ -855,37 +1028,131 @@ async function submitMeme(){
   showWaitingOthers(S.room);
 }
 
+// ═══ HAMBURGER MENU ═══
+function showHamburger(){
+  document.getElementById('hamburger-btn').classList.add('visible');
+  if(S.roomCode) document.getElementById('menu-room-info').textContent=`Комната: ${S.roomCode}`;
+}
+function hideHamburger(){ document.getElementById('hamburger-btn').classList.remove('visible'); closeMenu(); }
+function toggleMenu(){
+  document.getElementById('side-menu').classList.toggle('open');
+  document.getElementById('menu-overlay').classList.toggle('open');
+}
+function closeMenu(){
+  document.getElementById('side-menu').classList.remove('open');
+  document.getElementById('menu-overlay').classList.remove('open');
+}
+function openSuggest(){
+  closeMenu();
+  document.getElementById('suggest-step1').style.display='';
+  document.getElementById('suggest-step2').style.display='none';
+  document.getElementById('suggest-text').value='';
+  openModal('modal-suggest');
+}
+let _suggestType='';
+function openSuggestForm(type){
+  _suggestType=type;
+  const labels={situation:'📋 Предложить ситуацию',meme:'🖼️ Предложить мем',other:'✏️ Другое'};
+  const placeholders={situation:'Опиши ситуацию для карточки...',meme:'Ссылка на мем или описание...',other:'Напиши своё предложение...'};
+  document.getElementById('suggest-form-label').textContent=labels[type];
+  document.getElementById('suggest-text').placeholder=placeholders[type];
+  document.getElementById('suggest-step1').style.display='none';
+  document.getElementById('suggest-step2').style.display='';
+}
+function backSuggest(){ document.getElementById('suggest-step1').style.display=''; document.getElementById('suggest-step2').style.display='none'; }
+async function submitSuggest(){
+  const text=document.getElementById('suggest-text').value.trim();
+  if(!text){ toast('Напиши что-нибудь!','error'); return; }
+  try {
+    await fetch(`${CONFIG.supabase.url}/rest/v1/suggestions`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CONFIG.supabase.anonKey,'Authorization':`Bearer ${CONFIG.supabase.anonKey}`},
+      body:JSON.stringify({type:_suggestType,text,player:S.myName,room:S.roomCode})
+    });
+  } catch(e){}
+  closeModal('modal-suggest');
+  toast('Предложение отправлено! 💡');
+}
+function leaveGame(){
+  if(!confirm('Выйти из игры?')) return;
+  closeMenu();
+  S.roomCode=''; S.myIdx=-1; S.isHost=false; S.myHand=[];
+  hideHamburger();
+  showScreen('screen-welcome');
+  toast('Вы вышли из игры');
+}
+
+// ═══════════════════════════════════════════════════
+//  POKER TABLE RENDERER
+// ═══════════════════════════════════════════════════
+function renderPokerTable(containerId, room, phase){
+  const el = document.getElementById(containerId);
+  if(!el || !room) return;
+  const players = Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx);
+  const subs = room.submissions||{};
+  const scores = room.scores||{};
+  const n = players.length;
+  if(!n) return;
+  const cx = 50, cy = 50, rx = 42, ry = 38;
+
+  el.innerHTML = players.map((p, i) => {
+    const angle = (2 * Math.PI * i / n) - Math.PI/2;
+    const x = cx + rx * Math.cos(angle);
+    const y = cy + ry * Math.sin(angle);
+    const isMe = p.idx === S.myIdx;
+    const isReader = p.idx === room.readerIdx;
+    const hasDone = subs[p.idx] !== undefined;
+    const avatar = AVATARS[p.idx % AVATARS.length];
+    const pts = scores[p.idx] || 0;
+
+    let avatarClass = 'seat-avatar';
+    let statusText = '', statusClass = '';
+    if(isReader){
+      avatarClass += ' reader-seat';
+      statusText = '🎤 Читает';
+      statusClass = 'reader-lbl';
+    } else if(hasDone){
+      avatarClass += ' done';
+      statusText = '✅ Выбрал';
+      statusClass = 'done';
+    } else {
+      avatarClass += ' thinking';
+      statusText = '⏳ Думает';
+      statusClass = 'thinking';
+    }
+    if(isMe) avatarClass += ' me';
+
+    return `<div class="poker-seat" style="left:${x}%;top:${y}%">
+      <div class="${avatarClass}">${avatar}</div>
+      <div class="seat-name">${p.name} <span style="opacity:.6">(${pts})</span></div>
+      <div class="seat-status ${statusClass}">${statusText}</div>
+    </div>`;
+  }).join('');
+}
+
 // ═══════════════════════════════════════════════════
 //  WAITING SCREENS
 // ═══════════════════════════════════════════════════
-function showWaitingOthers(room){ renderWaitStatus(room); showScreen('screen-waiting-others'); }
+function showWaitingOthers(room){
+  if(!room) return;
+  document.getElementById('waiting-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  document.getElementById('waiting-sit-text2').textContent=room.situation||'—';
+  renderPokerTable('poker-table-waiting', room, 'waiting');
+  showScreen('screen-waiting-others');
+}
 function renderWaitStatus(room){
   if(!room) return;
-  const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx).filter(p=>p.idx!==room.readerIdx);
-  const subs=room.submissions||{};
-  document.getElementById('waiting-status-list').innerHTML=players.map(p=>`
-    <div class="status-row">
-      <div class="status-dot ${subs[p.idx]?'done':'waiting'}"></div>
-      <div style="font-weight:700">${p.name}</div>
-      <div style="margin-left:auto;font-size:.74rem;color:var(--muted)">${subs[p.idx]?'✅ Готов':'⏳...'}</div>
-    </div>`).join('');
+  renderPokerTable('poker-table-waiting', room, 'waiting');
 }
 function showReaderWait(room){
   document.getElementById('reader-wait-sit').textContent=room.situation||'—';
-  renderReaderWaitStatus(room);
+  renderPokerTable('poker-table-reader', room, 'reader');
   showScreen('screen-reader-wait');
   if(S.isHost) checkAllSubmitted(room);
 }
 function renderReaderWaitStatus(room){
   if(!room) return;
-  const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx).filter(p=>p.idx!==room.readerIdx);
-  const subs=room.submissions||{};
-  document.getElementById('reader-wait-status').innerHTML=players.map(p=>`
-    <div class="status-row">
-      <div class="status-dot ${subs[p.idx]?'done':'waiting'}"></div>
-      <div style="font-weight:700">${p.name}</div>
-      <div style="margin-left:auto;font-size:.74rem;color:var(--muted)">${subs[p.idx]?'✅ Готов':'⏳...'}</div>
-    </div>`).join('');
+  renderPokerTable('poker-table-reader', room, 'reader');
 }
 async function checkAllSubmitted(room){
   if(!room||!S.isHost) return;
