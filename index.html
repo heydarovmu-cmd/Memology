@@ -248,17 +248,13 @@ input[type=text]:focus{border-color:var(--accent3)}
     <div style="font-size:3.8rem;margin-bottom:12px">🎭</div>
     <div class="logo" id="main-logo">Memology</div>
     <div class="logo-sub">Study the chaos of memes</div>
-
-```
-<div class="divider"></div>
-<div style="display:flex;flex-direction:column;gap:11px;align-items:center">
-  <button class="btn btn-primary" onclick="showScreen('screen-create')" style="font-size:.95rem;padding:15px 42px">🏠 Создать комнату</button>
-  <button class="btn btn-cyan" onclick="showScreen('screen-join')" style="font-size:.95rem;padding:15px 42px">🔗 Войти в комнату</button>
-  <button class="btn btn-secondary" onclick="openModal('modal-howto')">📖 Как играть</button>
-  <button onclick="showAdminEntry()" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:8px;margin-top:4px;opacity:.3">⚙️</button>
-</div>
-```
-
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:11px;align-items:center">
+      <button class="btn btn-primary" onclick="showScreen('screen-create')" style="font-size:.95rem;padding:15px 42px">🏠 Создать комнату</button>
+      <button class="btn btn-cyan" onclick="showScreen('screen-join')" style="font-size:.95rem;padding:15px 42px">🔗 Войти в комнату</button>
+      <button class="btn btn-secondary" onclick="openModal('modal-howto')">📖 Как играть</button>
+      <button onclick="showAdminEntry()" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:8px;margin-top:4px;opacity:.3">⚙️</button>
+    </div>
   </div>
 </div>
 
@@ -426,11 +422,9 @@ input[type=text]:focus{border-color:var(--accent3)}
       <div class="sit-display-label">📋 Ситуация раунда</div>
       <div class="sit-display-text" id="pick-sit-text">—</div>
     </div>
-    <!-- Poker table -->
     <div class="poker-table-wrap">
       <div class="poker-table" id="poker-table"></div>
     </div>
-    <!-- My hand -->
     <p style="color:var(--muted);font-size:.8rem;margin-bottom:10px;text-align:center">🃏 Твои карты — выбери одну:</p>
     <div class="hand-area" id="pick-hand"></div>
     <div style="margin-top:16px;text-align:center">
@@ -566,17 +560,19 @@ input[type=text]:focus{border-color:var(--accent3)}
 
 <script>
 // ═══════════════════════════════════════════════════
-//  CONFIGURE: вставь свои ключи сюда
+//  CONFIGURE
 // ═══════════════════════════════════════════════════
 const CONFIG = {
-  // Firebase Realtime DB — для комнат и синхронизации игры
   firebase: {
-    apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
+    apiKey: "AIzaSyDLrNk7B-N_z9QCQh6T-anBPhYm0AtGkBs",
+    authDomain: "memology-75ff2.firebaseapp.com",
+    databaseURL: "https://memology-75ff2-default-rtdb.firebaseio.com",
+    projectId: "memology-75ff2",
+    storageBucket: "memology-75ff2.firebasestorage.app",
+    messagingSenderId: "521098707016",
+    appId: "1:521098707016:web:28f8aae36f9039d956187d",
+    measurementId: "G-EV9W7QB2YN"
   },
-  // Supabase — для хранения мемов и ситуаций
   supabase: {
     url: "https://dcxamyfvfoeoefcrdcqq.supabase.co",
     anonKey: "sb_publishable_eZ-6aeez3s8OAvHYGt20Bw_XvvyMut_",
@@ -584,7 +580,7 @@ const CONFIG = {
 };
 
 // ═══════════════════════════════════════════════════
-//  SUPABASE  (контент: мемы + ситуации)
+//  SUPABASE
 // ═══════════════════════════════════════════════════
 const SB = {
   async fetch(path, opts={}) {
@@ -604,17 +600,15 @@ const SB = {
     return this.fetch('situations?select=id,text&active=eq.true&order=id');
   },
   async getMemes() {
-    // Returns rows with: id, title, image_url
     return this.fetch('memes?select=id,title,image_url&active=eq.true&order=id');
   },
-  // Resolve public URL for image stored in Supabase Storage
   imageUrl(path) {
     return `${CONFIG.supabase.url}/storage/v1/object/public/memes/${path}`;
   }
 };
 
 // ═══════════════════════════════════════════════════
-//  FIREBASE  (комнаты + realtime sync)
+//  FIREBASE
 // ═══════════════════════════════════════════════════
 let db = null;
 let roomRef = null;
@@ -625,12 +619,14 @@ function initFirebase() {
     if(!firebase.apps.length) firebase.initializeApp(CONFIG.firebase);
     db = firebase.database();
     return true;
-  } catch(e) { return false; }
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    return false;
+  }
 }
 
-const useFirebase = initFirebase() && !CONFIG.firebase.databaseURL.includes('YOUR_PROJECT');
+const useFirebase = initFirebase();
 
-// BroadcastChannel + localStorage fallback (same device)
 const BC = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('memogram_v2') : null;
 if(BC) BC.onmessage = e => { if(e.data?.code===S.roomCode) { S.room=e.data.data; handleRoomUpdate(e.data.data); }};
 
@@ -653,6 +649,7 @@ function readLocal() {
 function subscribeRoom(code) {
   S.roomCode = code;
   if(useFirebase) {
+    if(roomRef) roomRef.off();
     roomRef = db.ref(`rooms/${code}`);
     roomRef.on('value', snap=>{ const d=snap.val(); if(d){S.room=d;handleRoomUpdate(d);} });
   } else {
@@ -687,16 +684,15 @@ const S = {
   myName:'', myIdx:-1, isHost:false, roomCode:'',
   selectedRounds:5, selectedPlayers:0,
   room:null,
-  myHand:[],            // [{id,title,image_url}]
+  myHand:[],
   selectedHandIdx:null,
   _judgeSelected:null,
-  // loaded content
   allMemes:[],
   allSituations:[],
 };
 
 // ═══ ADMIN PIN ═══
-const ADMIN_PIN = '1234'; // ← Измени свой PIN здесь
+const ADMIN_PIN = '1234';
 let _pin = '';
 
 function showAdminEntry(){ _pin=''; updatePinDots(); document.getElementById('pin-error').textContent=''; showScreen('screen-admin-pin'); }
@@ -715,7 +711,7 @@ function checkPin(){
   else { document.getElementById('pin-error').textContent='Неверный PIN'; _pin=''; updatePinDots(); }
 }
 
-// ═══ ANIMAL AVATARS ═══
+// ═══ AVATARS ═══
 const AVATARS=['🦊','🐼','🦁','🐸','🦋','🐙','🦄','🐻','🦅','🐯'];
 const COLORS=['#ff3d6b','#ffcc00','#00e5ff','#00c97a','#a855f7','#ff6b35','#0099dd','#e8427c','#34d399','#f59e0b'];
 
@@ -913,14 +909,12 @@ function shareRoom(){
 async function startGame() {
   const room=S.room;
   const players=Object.values(room.players).sort((a,b)=>a.idx-b.idx);
-  // Deal 5 memes each
   let pool=shuffle([...S.allMemes]);
   const hands={};
   players.forEach(p=>{
     if(pool.length<5) pool=[...pool,...shuffle(S.allMemes)];
     hands[p.idx]=pool.splice(0,5);
   });
-  // Pick 2 situations for first reader
   const sitPool=shuffle([...S.allSituations]);
   const sits=[sitPool[0], sitPool[1]||sitPool[0]];
   await patchRoom({ phase:'reader', currentRound:1, readerIdx:0, hands, situation:'', submissions:{}, tableCards:[], winnerIdx:-1, readerSits:sits, usedSituations:sits });
@@ -956,7 +950,6 @@ function handleRoomUpdate(room){
   else if(phase==='result'){ if(cur!=='screen-result') showResultScreen(room); }
   else if(phase==='end'){ if(cur!=='screen-end') showEndScreen(room); }
 
-  // Live status updates
   if(cur==='screen-waiting-others') renderWaitStatus(room);
   if(cur==='screen-reader-wait'){ renderReaderWaitStatus(room); if(S.isHost) checkAllSubmitted(room); }
 }
@@ -1062,7 +1055,7 @@ function openSuggestForm(type){
 function backSuggest(){ document.getElementById('suggest-step1').style.display=''; document.getElementById('suggest-step2').style.display='none'; }
 async function submitSuggest(){
   const text=document.getElementById('suggest-text').value.trim();
-  if(!text){ toast('Напиши что-нибудь!','error'); return; }
+  if(!text){ toast('Напиши что-нибудь!'); return; }
   try {
     await fetch(`${CONFIG.supabase.url}/rest/v1/suggestions`,{
       method:'POST',
@@ -1076,6 +1069,8 @@ async function submitSuggest(){
 function leaveGame(){
   if(!confirm('Выйти из игры?')) return;
   closeMenu();
+  if(roomRef) { roomRef.off(); roomRef=null; }
+  clearInterval(_pollIv);
   S.roomCode=''; S.myIdx=-1; S.isHost=false; S.myHand=[];
   hideHamburger();
   showScreen('screen-welcome');
@@ -1243,7 +1238,6 @@ async function nextRound(){
   const room=S.room;
   const nextRoundNum=(room.currentRound||1)+1;
   const nextReaderIdx=((room.readerIdx||0)+1)%Object.keys(room.players).length;
-  // Replenish hands
   const players=Object.values(room.players).sort((a,b)=>a.idx-b.idx);
   const hands={};
   let pool=shuffle([...S.allMemes]);
@@ -1253,7 +1247,6 @@ async function nextRound(){
     while(h.length<5){ if(!pool.length) pool=shuffle([...S.allMemes]); h.push(pool.shift()); }
     hands[p.idx]=h;
   });
-  // New situations
   const used=room.usedSituations||[];
   const avail=S.allSituations.filter(s=>!used.includes(s));
   const sitPool=shuffle(avail.length>=2?avail:[...S.allSituations]);
