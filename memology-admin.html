@@ -21,6 +21,20 @@ body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-
 @media(max-width:700px){.container{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px}
 .panel-title{font-family:'Unbounded',sans-serif;font-size:.85rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.sug-item{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;margin-bottom:9px;transition:opacity .2s}
+.sug-item.handled{opacity:.42}
+.sug-head{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap}
+.sug-type{font-size:.64rem;font-weight:900;letter-spacing:.7px;text-transform:uppercase;padding:3px 9px;border-radius:50px}
+.sug-t-situation{background:rgba(168,85,247,.14);color:#c9a0ff;border:1px solid rgba(168,85,247,.3)}
+.sug-t-meme{background:rgba(255,204,0,.12);color:var(--accent2);border:1px solid rgba(255,204,0,.3)}
+.sug-t-other{background:rgba(0,229,255,.1);color:var(--accent3);border:1px solid rgba(0,229,255,.28)}
+.sug-meta{font-size:.68rem;color:var(--muted);margin-left:auto;white-space:nowrap}
+.sug-text{font-size:.88rem;line-height:1.55;word-break:break-word;white-space:pre-wrap}
+.sug-acts{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+.sug-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 11px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s}
+.sug-btn:hover{border-color:var(--accent3);color:var(--accent3)}
+.sug-btn.del:hover{border-color:var(--accent);color:var(--accent)}
+.sug-btn.use:hover{border-color:var(--green);color:var(--green)}
 .panel-count{background:var(--card2);border:1px solid var(--border);border-radius:50px;padding:2px 10px;font-size:.7rem;font-weight:900;color:var(--text)}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border:none;border-radius:50px;font-family:'Unbounded',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .18s;text-transform:uppercase;letter-spacing:.6px}
 .btn-primary{background:linear-gradient(135deg,var(--accent),#ff6b35);color:#fff}
@@ -222,6 +236,22 @@ input[type=text]:focus,textarea:focus{border-color:var(--accent3)}
     <div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
   </div>
 </div>
+
+<!-- ПРЕДЛОЖЕНИЯ ИГРОКОВ -->
+<div class="panel" style="margin-top:20px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+    <h2 style="font-size:1rem;font-family:'Unbounded',sans-serif">&#128161; Предложения</h2>
+    <span class="panel-count" id="sug-count">0</span>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" style="padding:7px 14px;font-size:.72rem" onclick="toggleHandled()" id="sug-filter-btn">Показать обработанные</button>
+      <button class="btn btn-secondary" style="padding:7px 14px;font-size:.72rem" onclick="clearHandled()">Очистить обработанные</button>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:.78rem;margin-bottom:14px">Присланное игроками через меню в игре. Кнопка «В ситуации» сразу создаёт карточку.</p>
+  <div id="sug-list">
+    <div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">Загрузка...</div>
+  </div>
+</div>
 ```
 
   </div>
@@ -251,6 +281,23 @@ create table if not exists situations (
   active boolean default true,
   created_at timestamptz default now()
 );
+
+-- Таблица предложений от игроков
+create table if not exists suggestions (
+  id bigserial primary key,
+  type text not null,
+  text text not null,
+  player text,
+  room text,
+  handled boolean default false,
+  created_at timestamptz default now()
+);
+
+alter table suggestions enable row level security;
+create policy "public insert suggestions" on suggestions for insert with check (true);
+create policy "public read suggestions"   on suggestions for select using (true);
+create policy "public update suggestions" on suggestions for update using (true);
+create policy "public delete suggestions" on suggestions for delete using (true);
 
 -- Таблица мемов
 create table if not exists memes (
@@ -377,6 +424,7 @@ async function loadAll(){
     ]);
     renderMemes(memes||[]);
     renderSituations(sits||[]);
+    loadSuggestions();
     setStatus('Подключено ✓','ok');
   } catch(e) {
     setStatus('Ошибка','error');
@@ -738,6 +786,122 @@ async function importOcrSits(){
 //  TOAST
 // ─────────────────────────────────────────────
 let _toastTm;
+// ─────────────────────────────────────────────
+//  ПРЕДЛОЖЕНИЯ ИГРОКОВ
+// ─────────────────────────────────────────────
+let _sugs = [], _showHandled = false;
+
+async function loadSuggestions(){
+  try {
+    _sugs = await api('suggestions?select=*&order=created_at.desc') || [];
+    renderSuggestions();
+  } catch(e){
+    document.getElementById('sug-list').innerHTML =
+      '<div style="text-align:center;padding:30px;color:var(--muted);font-size:.82rem">' +
+      'Таблица предложений ещё не создана.<br>' +
+      '<span style="color:var(--accent3)">Нажми «Показать SQL» и выполни его заново</span> — добавится блок suggestions.' +
+      '</div>';
+    document.getElementById('sug-count').textContent = '—';
+  }
+}
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"\']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function whenStr(iso){
+  if(!iso) return '';
+  const d = new Date(iso), diff = (Date.now() - d.getTime()) / 1000;
+  if(diff < 60)     return 'только что';
+  if(diff < 3600)   return Math.floor(diff/60) + ' мин назад';
+  if(diff < 86400)  return Math.floor(diff/3600) + ' ч назад';
+  if(diff < 604800) return Math.floor(diff/86400) + ' дн назад';
+  return d.toLocaleDateString('ru-RU');
+}
+
+function renderSuggestions(){
+  const list = _showHandled ? _sugs : _sugs.filter(s => !s.handled);
+  const pending = _sugs.filter(s => !s.handled).length;
+
+  document.getElementById('sug-count').textContent =
+    pending + (_sugs.length !== pending ? ' / ' + _sugs.length : '');
+  document.getElementById('sug-filter-btn').textContent =
+    _showHandled ? 'Скрыть обработанные' : 'Показать обработанные';
+
+  const el = document.getElementById('sug-list');
+  if(!list.length){
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:.85rem">' +
+      (_sugs.length ? 'Все предложения обработаны' : 'Пока ничего не прислали') + '</div>';
+    return;
+  }
+
+  const labels = { situation:'Ситуация', meme:'Мем', other:'Другое' };
+  el.innerHTML = list.map(s => {
+    const t = ['situation','meme','other'].includes(s.type) ? s.type : 'other';
+    const who = [s.player, s.room ? ('комната ' + s.room) : ''].filter(Boolean).join(' · ');
+    return '<div class="sug-item ' + (s.handled ? 'handled' : '') + '">' +
+      '<div class="sug-head">' +
+        '<span class="sug-type sug-t-' + t + '">' + labels[t] + '</span>' +
+        (who ? '<span style="font-size:.74rem;color:var(--muted)">' + esc(who) + '</span>' : '') +
+        '<span class="sug-meta">' + whenStr(s.created_at) + '</span>' +
+      '</div>' +
+      '<div class="sug-text">' + esc(s.text) + '</div>' +
+      '<div class="sug-acts">' +
+        (t === 'situation' && !s.handled
+          ? '<button class="sug-btn use" onclick="sugToSituation(' + s.id + ')">В ситуации</button>' : '') +
+        '<button class="sug-btn" onclick="sugHandled(' + s.id + ',' + (!s.handled) + ')">' +
+          (s.handled ? 'Вернуть' : 'Обработано') + '</button>' +
+        '<button class="sug-btn del" onclick="sugDelete(' + s.id + ')">Удалить</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleHandled(){ _showHandled = !_showHandled; renderSuggestions(); }
+
+async function sugHandled(id, val){
+  try {
+    await api('suggestions?id=eq.' + id, { method:'PATCH', body: JSON.stringify({ handled: val }) });
+    const s = _sugs.find(x => x.id === id);
+    if(s) s.handled = val;
+    renderSuggestions();
+  } catch(e){ toast('Ошибка: ' + e.message, 'error'); }
+}
+
+async function sugDelete(id){
+  if(!confirm('Удалить предложение?')) return;
+  try {
+    await api('suggestions?id=eq.' + id, { method:'DELETE' });
+    _sugs = _sugs.filter(x => x.id !== id);
+    renderSuggestions();
+    toast('Удалено', 'success');
+  } catch(e){ toast('Ошибка: ' + e.message, 'error'); }
+}
+
+async function sugToSituation(id){
+  const s = _sugs.find(x => x.id === id);
+  if(!s) return;
+  try {
+    await api('situations', { method:'POST', body: JSON.stringify({ text: s.text, active: true }) });
+    await sugHandled(id, true);
+    toast('Добавлено в ситуации', 'success');
+    loadAll();
+  } catch(e){ toast('Ошибка: ' + e.message, 'error'); }
+}
+
+async function clearHandled(){
+  const n = _sugs.filter(s => s.handled).length;
+  if(!n){ toast('Нечего очищать'); return; }
+  if(!confirm('Удалить обработанные предложения (' + n + ' шт.)?')) return;
+  try {
+    await api('suggestions?handled=eq.true', { method:'DELETE' });
+    _sugs = _sugs.filter(s => !s.handled);
+    renderSuggestions();
+    toast('Удалено: ' + n, 'success');
+  } catch(e){ toast('Ошибка: ' + e.message, 'error'); }
+}
+
 function toast(msg, type=''){
   clearTimeout(_toastTm);
   const el=document.getElementById('toast');
