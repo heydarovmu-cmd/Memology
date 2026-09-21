@@ -10,10 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase
+        env:
+          RAW_URL: ${{ secrets.SUPABASE_URL }}
+          RAW_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/situations?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}")
+          URL=$(echo "$RAW_URL" | tr -d '[:space:]')
+          URL="${URL%/}"
+          KEY=$(echo "$RAW_KEY" | tr -d '[:space:]')
+          CODE=$(curl -s -o /tmp/body.txt -w '%{http_code}' \
+            "$URL/rest/v1/situations?select=id&limit=1" \
+            -H "apikey: $KEY")
           echo "HTTP $CODE"
+          cat /tmp/body.txt
           [ "$CODE" = "200" ] || exit 1
