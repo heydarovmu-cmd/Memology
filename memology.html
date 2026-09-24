@@ -562,7 +562,7 @@ input[type=text]:focus{border-color:var(--accent3)}
     <div class="logo" style="font-size:2.2rem;margin-bottom:6px">ИГРА ОКОНЧЕНА!</div>
     <div id="winner-text" style="font-size:1.05rem;color:var(--accent2);font-weight:700;margin-bottom:20px"></div>
     <div class="scoreboard" id="final-scoreboard" style="margin-bottom:24px"></div>
-    <button class="btn btn-primary" onclick="showScreen('screen-welcome')">🏠 Главная</button>
+    <button class="btn btn-primary" onclick="exitToHome()">🏠 Главная</button>
   </div>
   <div class="confetti-container" id="confetti"></div>
 </div>
@@ -736,6 +736,57 @@ function flattenPatch(obj){
 }
 
 // ═══════════════════════════════════════════════════
+//  СЕССИЯ: возврат в игру после обновления страницы
+// ═══════════════════════════════════════════════════
+const SESSION_KEY = 'mg_session';
+
+function saveSession(){
+  if(!S.roomCode || S.myIdx < 0) return;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      code: S.roomCode, idx: S.myIdx, name: S.myName, host: S.isHost, at: Date.now()
+    }));
+  } catch(e){}
+}
+
+function clearSession(){
+  try { localStorage.removeItem(SESSION_KEY); } catch(e){}
+}
+
+async function restoreSession(){
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e){}
+  if(!s || !s.code) return false;
+
+  // Комнаты старше суток удаляются на сервере — держать сессию незачем
+  if(Date.now() - (s.at || 0) > 24*3600*1000){ clearSession(); return false; }
+
+  showScreen('screen-loading');
+
+  let room = null;
+  try { room = await fetchRoom(s.code); } catch(e){}
+  if(!room){ clearSession(); showScreen('screen-welcome'); return false; }
+
+  // Игрока могли выкинуть или комнату пересоздать под тем же кодом
+  if(!(room.players || {})[s.idx]){ clearSession(); showScreen('screen-welcome'); return false; }
+
+  if(!await loadContent()) return false;
+
+  S.myName  = s.name;
+  S.myIdx   = s.idx;
+  S.isHost  = !!s.host;
+  S.roomCode = s.code;
+  S.room    = room;
+  if(room.hands && room.hands[s.idx]) S.myHand = room.hands[s.idx];
+
+  subscribeRoom(s.code);
+  showHamburger();
+  handleRoomUpdate(room);
+  toast(`С возвращением, ${s.name}!`, 2400);
+  return true;
+}
+
+// ═══════════════════════════════════════════════════
 //  GAME STATE
 // ═══════════════════════════════════════════════════
 const S = {
@@ -843,7 +894,8 @@ function selectRounds(n,btn){
 window.onload = ()=>{
   selectRounds(5,document.querySelector('.rounds-grid .num-btn'));
   scaleTagline();
-  if(location.search.includes('preview')) pvStart();
+  if(location.search.includes('preview')){ pvStart(); return; }
+  restoreSession();
 };
 
 // ═══════════════════════════════════════════════════
@@ -915,6 +967,7 @@ function pvStart(){
   writeRoom      = async ()=>{};
   patchRoom      = async ()=>{};
   playCard       = async ()=>{};
+  saveSession    = ()=>{};
   subscribeRoom  = ()=>{};
   loadContent    = async ()=>{ S.allMemes = [0,1,2,3,4,5].map(pvMeme);
                                S.allSituations = ['Ситуация раз','Ситуация два']; return true; };
@@ -1050,6 +1103,7 @@ async function createRoom() {
 
   await writeRoom(roomData);
   subscribeRoom(code);
+  saveSession();
   showLobby(roomData);
 }
 
@@ -1083,6 +1137,7 @@ async function joinRoom() {
   });
 
   subscribeRoom(code);
+  saveSession();
   showLobby(S.room || existing);
 }
 
@@ -1181,12 +1236,17 @@ function handleRoomUpdate(room){
     else if(!isReader && cur!=='screen-waiting-sit') showWaitingSit(room);
   }
   else if(phase==='picking'){
+    // Переход к голосованию запускает хост — независимо от того, на каком он
+    // экране. Со 2-го раунда читающим становится другой игрок, и раньше
+    // проверка не вызывалась вообще: партия зависала на «ждём остальных».
+    if(S.isHost) checkAllSubmitted(room);
+
     const mySub=room.submissions?.[S.myIdx];
     if(!isReader){
       if(!mySub && cur!=='screen-pick') showPickScreen(room);
       else if(mySub) { if(cur!=='screen-waiting-others') showWaitingOthers(room); else renderWaitStatus(room); }
     } else {
-      if(cur!=='screen-reader-wait') showReaderWait(room); else { renderReaderWaitStatus(room); if(S.isHost) checkAllSubmitted(room); }
+      if(cur!=='screen-reader-wait') showReaderWait(room); else renderReaderWaitStatus(room);
     }
   }
   else if(phase==='judging'){
@@ -1374,6 +1434,7 @@ function leaveGame(){
   if(!confirm('Выйти из игры?')) return;
   closeMenu();
   unsubscribeRoom();
+  clearSession();
   _lastRoomJson='';
   S.roomCode=''; S.myIdx=-1; S.isHost=false; S.myHand=[];
   hideHamburger();
@@ -1456,13 +1517,25 @@ function renderReaderWaitStatus(room){
   if(!room) return;
   renderPokerTable('poker-table-reader', room, 'reader');
 }
+let _switching = false;
+
 async function checkAllSubmitted(room){
-  if(!room||!S.isHost) return;
-  const players=Object.values(room.players||{}).filter(p=>p.idx!==room.readerIdx);
-  const subs=room.submissions||{};
-  if(!players.every(p=>subs[p.idx])) return;
-  const tableCards=shuffle(players.map(p=>({playerIdx:p.idx,...subs[p.idx]})));
-  await patchRoom({phase:'judging',tableCards});
+  if(!room || !S.isHost) return;
+  if(room.phase !== 'picking') return;     // уже перешли
+  if(_switching) return;                   // перевод уже в пути
+
+  const players = Object.values(room.players||{}).filter(p => p.idx !== room.readerIdx);
+  if(!players.length) return;
+  const subs = room.submissions || {};
+  if(!players.every(p => subs[p.idx])) return;
+
+  _switching = true;
+  try {
+    const tableCards = shuffle(players.map(p => ({ playerIdx:p.idx, ...subs[p.idx] })));
+    await patchRoom({ phase:'judging', tableCards });
+  } finally {
+    _switching = false;
+  }
 }
 function showWaitingJudge(room){
   document.getElementById('waiting-judge-text').textContent=`${room.players?.[room.readerIdx]?.name||'Читающий'} выбирает лучший мем...`;
@@ -1608,6 +1681,14 @@ function showEndScreen(room){
       <div class="score-pts">${p.score||0} очков</div>
     </div>`).join('');
   showScreen('screen-end'); spawnConfetti();
+}
+
+function exitToHome(){
+  unsubscribeRoom();
+  clearSession();
+  _lastRoomJson=''; S.roomCode=''; S.myIdx=-1; S.isHost=false; S.myHand=[];
+  hideHamburger();
+  showScreen('screen-welcome');
 }
 
 function spawnConfetti(){
