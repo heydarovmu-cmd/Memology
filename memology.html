@@ -61,7 +61,9 @@ input[type=text]:focus{border-color:var(--accent3)}
 .num-btn:hover{border-color:var(--accent);background:rgba(255,61,107,.08)}
 .num-btn.selected{border-color:var(--accent);background:rgba(255,61,107,.16);box-shadow:0 0 14px rgba(255,61,107,.25)}
 /* DUAL CARD */
-.dual-card{width:min(320px,88vw);border-radius:22px;overflow:hidden;box-shadow:0 0 80px rgba(0,0,0,.8);margin:0 auto;border:1px solid rgba(255,255,255,.06)}
+.dual-card{width:min(320px,88vw);border-radius:22px;overflow:hidden;box-shadow:0 0 80px rgba(0,0,0,.8);margin:0 auto;border:1px solid rgba(255,255,255,.06);transition:transform .55s cubic-bezier(.45,.05,.2,1)}
+.dual-card.flipped{transform:rotate(180deg)}
+.sit-half .sit-tap{font-size:.56rem;letter-spacing:2px;font-weight:800;text-transform:uppercase;opacity:.45;margin-top:2px}
 .sit-half{padding:28px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;cursor:pointer;transition:filter .18s,opacity .28s;position:relative;gap:10px}
 .sit-half:hover{filter:brightness(1.12)}
 .sit-half.top{background:linear-gradient(155deg,#180728,#2a0e5a)}
@@ -154,17 +156,42 @@ input[type=text]:focus{border-color:var(--accent3)}
 .suggest-opt{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;font-weight:700;font-size:.88rem;color:var(--text);transition:all .2s}
 .suggest-opt:hover{border-color:var(--accent3);background:rgba(0,229,255,.06)}
 .suggest-opt-icon{font-size:1.3rem}
-.poker-table-wrap{display:flex;justify-content:center;align-items:center;margin:14px 0;min-height:220px}
-.poker-table{position:relative;width:min(460px,90vw);height:200px}
-.poker-table::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,#1a3a1a,#0d220d);border:3px solid #2d5a2d;border-radius:100px;box-shadow:0 0 40px rgba(0,0,0,.6),inset 0 0 30px rgba(0,0,0,.4)}
+.poker-table-wrap{display:flex;justify-content:center;align-items:center;margin:18px 0;min-height:300px}
+.poker-table{position:relative;width:min(760px,96vw);height:clamp(250px,42vw,320px)}
+/* Сукно: холодный серо-синий градиент */
+.poker-table::before{
+  content:'';position:absolute;inset:0;border-radius:20px;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 45%, #2b3446 0%, #1d2430 55%, #141922 100%);
+  border:2px solid #3d4a63;
+  box-shadow:
+    0 0 0 1px rgba(0,229,255,.18),
+    0 0 34px rgba(0,229,255,.22),
+    0 18px 50px rgba(0,0,0,.65),
+    inset 0 0 70px rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(255,255,255,.05);
+}
+/* Неоновая разметка по центру стола */
+.poker-table::after{
+  content:'';position:absolute;inset:26px;border-radius:12px;
+  border:1px solid rgba(0,229,255,.16);
+  box-shadow:inset 0 0 26px rgba(0,229,255,.06);
+  pointer-events:none;
+}
+.poker-logo{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Unbounded',sans-serif;font-size:clamp(.9rem,3.4vw,1.5rem);font-weight:900;
+  letter-spacing:5px;text-transform:uppercase;color:rgba(0,229,255,.14);
+  text-shadow:0 0 22px rgba(0,229,255,.2);white-space:nowrap;pointer-events:none;user-select:none;
+}
 .poker-seat{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;transform:translate(-50%,-50%);z-index:2}
-.seat-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border:2px solid var(--border);background:var(--card2);transition:all .3s}
-.seat-avatar.me{border-color:var(--accent3);box-shadow:0 0 14px rgba(0,229,255,.4)}
-.seat-avatar.reader-seat{border-color:var(--purple);box-shadow:0 0 14px rgba(168,85,247,.4)}
-.seat-avatar.done{border-color:var(--green);box-shadow:0 0 10px rgba(0,201,122,.3)}
-.seat-avatar.thinking{border-color:var(--accent2);animation:pulse 1.2s infinite}
-.seat-name{font-size:.6rem;font-weight:700;color:var(--text);max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(10,10,12,.85);padding:2px 7px;border-radius:8px}
-.seat-status{font-size:.55rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:6px}
+.seat-avatar{width:clamp(48px,9vw,60px);height:clamp(48px,9vw,60px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(1.5rem,4.4vw,1.9rem);border:2px solid #47536b;background:linear-gradient(160deg,#242c3a,#161b24);transition:all .3s}
+.seat-avatar.me{border-color:var(--accent3);box-shadow:0 0 20px rgba(0,229,255,.55)}
+.seat-avatar.reader-seat{border-color:var(--purple);box-shadow:0 0 20px rgba(168,85,247,.5)}
+.seat-avatar.done{border-color:var(--green);box-shadow:0 0 16px rgba(0,201,122,.45)}
+.seat-avatar.thinking{border-color:var(--accent2);box-shadow:0 0 16px rgba(255,204,0,.35);animation:pulse 1.2s infinite}
+.seat-name{font-size:.65rem;font-weight:700;color:var(--text);max-width:82px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:rgba(8,10,14,.9);border:1px solid rgba(0,229,255,.1);padding:2px 9px;border-radius:8px}
+.seat-status{font-size:.56rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 6px;border-radius:6px;white-space:nowrap}
 .seat-status.done{color:var(--green)}
 .seat-status.thinking{color:var(--accent2)}
 .seat-status.reader-lbl{color:var(--purple)}
@@ -383,9 +410,7 @@ input[type=text]:focus{border-color:var(--accent3)}
 <!-- LOADING CONTENT -->
 <div class="screen" id="screen-loading">
   <div style="text-align:center">
-    <div style="font-size:2.8rem;margin-bottom:16px" class="pulsing">🎲</div>
-    <h2 style="font-size:1.1rem;margin-bottom:10px">Загрузка контента...</h2>
-    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <h2 style="font-size:1.1rem" class="pulsing">Загрузка</h2>
   </div>
 </div>
 
@@ -398,7 +423,7 @@ input[type=text]:focus{border-color:var(--accent3)}
     </div>
     <p style="color:var(--muted);font-size:.82rem;margin-bottom:18px;line-height:1.6">Зачитай обе ситуации вслух.<br>Нажми на ту, которую выбираешь.</p>
     <div class="dual-card" id="dual-card"></div>
-    <p style="color:var(--muted);font-size:.7rem;margin-top:13px;line-height:1.5">💡 Нижняя написана вверх ногами — переверни устройство 😄</p>
+    <p style="color:var(--muted);font-size:.7rem;margin-top:13px;line-height:1.5" id="reader-hint">💡 Нажми на перевёрнутую — карточка развернётся</p>
   </div>
 </div>
 
@@ -1119,18 +1144,42 @@ function handleRoomUpdate(room){
 function showReaderScreen(room){
   document.getElementById('reader-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
   const sits=room.readerSits||['',''];
-  document.getElementById('dual-card').innerHTML=`
-    <div class="sit-half top" id="sh-top" onclick="readerChoose(0)">
-      <div class="sit-label">Ситуация А — нажми чтобы выбрать</div>
+  _flipped = false;
+  const card = document.getElementById('dual-card');
+  card.classList.remove('flipped');
+  card.innerHTML=`
+    <div class="sit-half top" id="sh-top" onclick="readerTap(0)">
+      <div class="sit-label">Ситуация А</div>
       <div class="sit-text">${sits[0]}</div>
+      <div class="sit-tap" id="tap-a">нажми чтобы выбрать</div>
     </div>
     <div class="sit-divider"></div>
-    <div class="sit-half bottom" id="sh-bot" onclick="readerChoose(1)">
+    <div class="sit-half bottom" id="sh-bot" onclick="readerTap(1)">
+      <div class="sit-tap" id="tap-b">нажми чтобы развернуть</div>
       <div class="sit-text">${sits[1]}</div>
-      <div class="sit-label">Ситуация Б — нажми чтобы выбрать</div>
+      <div class="sit-label">Ситуация Б</div>
     </div>`;
   showScreen('screen-reader');
 }
+// Перевёрнутую половину сначала нужно развернуть, и только потом выбрать.
+// Так исключаются случайные тычки в нечитаемый текст.
+let _flipped = false;
+
+function readerTap(idx){
+  const card = document.getElementById('dual-card');
+  const upsideDown = (idx === 1 && !_flipped) || (idx === 0 && _flipped);
+
+  if(upsideDown){
+    _flipped = !_flipped;
+    card.classList.toggle('flipped', _flipped);
+    document.getElementById('tap-a').textContent = _flipped ? 'нажми чтобы развернуть' : 'нажми чтобы выбрать';
+    document.getElementById('tap-b').textContent = _flipped ? 'нажми чтобы выбрать'   : 'нажми чтобы развернуть';
+    document.getElementById('reader-hint').textContent = '💡 Нажми ещё раз, чтобы выбрать эту ситуацию';
+    return;
+  }
+  readerChoose(idx);
+}
+
 async function readerChoose(idx){
   const top=document.getElementById('sh-top'),bot=document.getElementById('sh-bot');
   if(!top||!bot) return;
@@ -1271,12 +1320,15 @@ function renderPokerTable(containerId, room, phase){
   const scores = room.scores||{};
   const n = players.length;
   if(!n) return;
-  const cx = 50, cy = 50, rx = 42, ry = 38;
+  const cx = 50, cy = 50, rx = 44, ry = 40;
 
-  el.innerHTML = players.map((p, i) => {
+  el.innerHTML = '<div class="poker-logo">MEMOLOGY</div>' + players.map((p, i) => {
     const angle = (2 * Math.PI * i / n) - Math.PI/2;
-    const x = cx + rx * Math.cos(angle);
-    const y = cy + ry * Math.sin(angle);
+    const ca = Math.cos(angle), sa = Math.sin(angle);
+    // Проекция на границу прямоугольника: у эллипса углы стола пустовали
+    const m = Math.max(Math.abs(ca), Math.abs(sa)) || 1;
+    const x = cx + rx * ca / m;
+    const y = cy + ry * sa / m;
     const isMe = p.idx === S.myIdx;
     const isReader = p.idx === room.readerIdx;
     const hasDone = subs[p.idx] !== undefined;
