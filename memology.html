@@ -195,6 +195,22 @@ input[type=text]:focus{border-color:var(--accent3)}
 .seat-status.done{color:var(--green)}
 .seat-status.thinking{color:var(--accent2)}
 .seat-status.reader-lbl{color:var(--purple)}
+/* ПРОСМОТР МЕМА В ПОЛНЫЙ РАЗМЕР */
+.lb{display:none;position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.94);
+    backdrop-filter:blur(6px);align-items:center;justify-content:center;
+    padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.lb.open{display:flex;animation:fadeIn .18s ease}
+.lb-inner{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:min(920px,96vw);width:100%}
+/* Картинки бывают любых пропорций — вписываем целиком, не обрезая и не растягивая */
+.lb-img{max-width:100%;max-height:64vh;width:auto;height:auto;object-fit:contain;
+        border-radius:16px;box-shadow:0 0 70px rgba(0,0,0,.85);background:#101015;display:block}
+.lb-title{font-family:'Unbounded',sans-serif;font-size:.95rem;font-weight:700;text-align:center;line-height:1.4}
+.lb-sub{font-size:.72rem;color:var(--muted);text-align:center;margin-top:-6px}
+.lb-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.lb-x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:14px;
+      background:rgba(20,20,26,.9);border:1px solid var(--border);color:var(--text);
+      border-radius:50%;width:38px;height:38px;font-size:1rem;cursor:pointer}
+.hand-card,.table-card.face-up{-webkit-tap-highlight-color:transparent}
 /* PREVIEW MODE */
 .pv-bar{position:fixed;left:0;right:0;bottom:0;z-index:900;background:rgba(12,12,16,.97);border-top:1px solid var(--border);backdrop-filter:blur(12px);padding:9px 10px calc(9px + env(safe-area-inset-bottom,0px));display:none}
 .pv-bar.on{display:block}
@@ -451,7 +467,7 @@ input[type=text]:focus{border-color:var(--accent3)}
     <div class="poker-table-wrap">
       <div class="poker-table" id="poker-table"></div>
     </div>
-    <p style="color:var(--muted);font-size:.8rem;margin-bottom:10px;text-align:center">🃏 Твои карты — выбери одну:</p>
+    <p style="color:var(--muted);font-size:.8rem;margin-bottom:10px;text-align:center">🃏 Твои карты — нажми, чтобы рассмотреть:</p>
     <div class="hand-area" id="pick-hand"></div>
     <div style="margin-top:16px;text-align:center">
       <button class="btn btn-primary" id="submit-btn" onclick="submitMeme()" disabled>✅ Отправить мем</button>
@@ -572,6 +588,17 @@ input[type=text]:focus{border-color:var(--accent3)}
     <h2 style="font-size:1.1rem;margin-bottom:14px">📊 Текущий счёт</h2>
     <div class="scoreboard" id="live-scoreboard"></div>
     <button class="btn btn-secondary" onclick="closeModal('modal-scores')" style="margin-top:16px;width:100%;justify-content:center">Закрыть</button>
+  </div>
+</div>
+
+<!-- ПРОСМОТР МЕМА -->
+<div class="lb" id="lb" onclick="if(event.target===this)closeLb()">
+  <button class="lb-x" onclick="closeLb()">✕</button>
+  <div class="lb-inner">
+    <img class="lb-img" id="lb-img" alt="">
+    <div class="lb-title" id="lb-title"></div>
+    <div class="lb-sub" id="lb-sub"></div>
+    <div class="lb-acts" id="lb-acts"></div>
   </div>
 </div>
 
@@ -763,6 +790,38 @@ function toast(msg,dur=2600){const el=document.getElementById('toast');el.textCo
 function shuffle(a){const arr=[...a];for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr}
 function genCode(){return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('')}
 function roundsLabel(r){return r===9999?'∞':r}
+
+// ═══════════════════════════════════════════════════
+//  ПРОСМОТР МЕМА В ПОЛНЫЙ РАЗМЕР
+// ═══════════════════════════════════════════════════
+function memeUrl(m){
+  if(!m || !m.image_url) return '';
+  return m.image_url;
+}
+
+// action — необязательная кнопка действия: {label, fn}
+function openMeme(m, action, sub){
+  if(!m) return;
+  document.getElementById('lb-img').src   = memeUrl(m);
+  document.getElementById('lb-title').textContent = m.title || '';
+  document.getElementById('lb-sub').textContent   = sub || '';
+
+  const acts = document.getElementById('lb-acts');
+  acts.innerHTML = action
+    ? `<button class="btn btn-secondary" onclick="closeLb()">Назад</button>
+       <button class="btn btn-green" id="lb-go">${action.label}</button>`
+    : `<button class="btn btn-secondary" onclick="closeLb()">Закрыть</button>`;
+
+  if(action) document.getElementById('lb-go').onclick = ()=>{ closeLb(); action.fn(); };
+  document.getElementById('lb').classList.add('open');
+}
+
+function closeLb(){
+  document.getElementById('lb').classList.remove('open');
+  document.getElementById('lb-img').src = '';
+}
+
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLb(); });
 
 function memeImg(m,h=90){
   if(!m) return '';
@@ -1207,7 +1266,7 @@ function showPickScreen(room){
   S.selectedHandIdx=null;
   document.getElementById('submit-btn').disabled=true;
   document.getElementById('pick-hand').innerHTML=(S.myHand||[]).map((m,i)=>`
-    <div class="hand-card" onclick="selectCard(${i})" id="hc-${i}">
+    <div class="hand-card" onclick="openHandCard(${i})" id="hc-${i}">
       ${memeImg(m,78)}
       <div class="hand-card-title">${m.title}</div>
     </div>`).join('');
@@ -1218,10 +1277,20 @@ function showPickScreen(room){
   renderPokerTable('poker-table', room, 'pick');
   showScreen('screen-pick');
 }
+// Мем сначала открывается целиком — выбрать вслепую по мелкой превьюшке нельзя
+function openHandCard(i){
+  const m = S.myHand[i];
+  if(!m) return;
+  openMeme(m, { label:'✅ Выбрать этот мем', fn:()=>selectCard(i) },
+           'Выбери — потом нажми «Отправить мем»');
+}
+
 function selectCard(i){
   S.selectedHandIdx=i;
   document.querySelectorAll('.hand-card').forEach((c,idx)=>c.classList.toggle('selected-hand',idx===i));
-  document.getElementById('submit-btn').disabled=false;
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = false;
+  btn.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 // Розыгрыш карты целиком на сервере, под блокировкой строки:
 // карта уходит из руки на стол, из колоды приходит замена ровно на её место.
@@ -1411,9 +1480,9 @@ function showJudgeScreen(room,revealed){
       <div class="table-card face-down" onclick="revealCards()"><div class="tc-inner"></div></div>`).join('');
     btn.style.display='none';
   } else {
-    document.getElementById('judge-instruction').textContent='👇 Выбери самый смешной мем!';
+    document.getElementById('judge-instruction').textContent='👇 Нажми на мем, чтобы рассмотреть его целиком';
     document.getElementById('judge-table').innerHTML=cards.map((tc,i)=>`
-      <div class="table-card face-up flip-in" id="jc-${i}" onclick="judgeSelect(${i})" style="animation-delay:${i*.07}s">
+      <div class="table-card face-up flip-in" id="jc-${i}" onclick="openTableCard(${i})" style="animation-delay:${i*.07}s">
         <div class="tc-inner">${memeImg(tc,90)}<div class="tc-title">${tc.title}</div></div>
       </div>`).join('');
     btn.style.display='inline-flex'; btn.disabled=true;
@@ -1421,10 +1490,19 @@ function showJudgeScreen(room,revealed){
   showScreen('screen-judge');
 }
 function revealCards(){ showJudgeScreen(S.room,true); }
+function openTableCard(i){
+  const tc = (S.room.tableCards||[])[i];
+  if(!tc) return;
+  openMeme(tc, { label:'🏆 Выбрать этот мем', fn:()=>judgeSelect(i) },
+           'Автор пока скрыт');
+}
+
 function judgeSelect(i){
   S._judgeSelected=i;
   document.querySelectorAll('.table-card.face-up').forEach((el,idx)=>el.classList.toggle('winning',idx===i));
-  document.getElementById('judge-confirm-btn').disabled=false;
+  const btn = document.getElementById('judge-confirm-btn');
+  btn.disabled = false;
+  btn.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 async function judgeConfirm(){
   if(S._judgeSelected==null) return;
@@ -1446,14 +1524,15 @@ function showResultScreen(room){
     <div style="background:linear-gradient(135deg,rgba(255,204,0,.12),rgba(255,100,0,.08));border:2px solid rgba(255,204,0,.3);border-radius:16px;padding:20px;box-shadow:0 0 32px rgba(255,204,0,.18);max-width:360px;margin:0 auto">
       <div style="font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:7px;font-weight:700">🏆 Победитель раунда</div>
       <div style="font-family:'Unbounded',sans-serif;font-size:1.3rem;font-weight:900;margin-bottom:10px">${winner.name}</div>
-      <div style="border-radius:10px;overflow:hidden;max-height:100px">${memeImg(winCard,100)}</div>
+      <div style="border-radius:10px;overflow:hidden;max-height:100px;cursor:pointer"
+           onclick="openMeme(S.room.tableCards.find(c=>c.playerIdx===S.room.winnerIdx),null,'Победитель раунда 🏆')">${memeImg(winCard,100)}</div>
       <div style="color:var(--muted);font-size:.82rem;margin-top:8px">«${winCard.title}»</div>
     </div>`:
     `<div style="color:var(--muted);padding:14px">Ничья 😅</div>`;
 
-  document.getElementById('result-all-cards').innerHTML=cards.map(tc=>{
+  document.getElementById('result-all-cards').innerHTML=cards.map((tc,i)=>{
     const p=room.players?.[tc.playerIdx],isWin=tc.playerIdx===room.winnerIdx;
-    return `<div class="table-card face-up ${isWin?'winning':''}">
+    return `<div class="table-card face-up ${isWin?'winning':''}" onclick="openResultCard(${i})">
       <div class="tc-inner">${memeImg(tc,90)}
       <div class="tc-title">${tc.title}</div>
       <div class="tc-owner">${p?.name||'?'}${isWin?' 🏆':''}</div></div></div>`;
@@ -1469,6 +1548,14 @@ function showResultScreen(room){
   }
   showScreen('screen-result');
 }
+function openResultCard(i){
+  const room = S.room, tc = (room.tableCards||[])[i];
+  if(!tc) return;
+  const p = room.players && room.players[tc.playerIdx];
+  const who = p ? p.name : '?';
+  openMeme(tc, null, tc.playerIdx === room.winnerIdx ? `${who} — победитель раунда 🏆` : who);
+}
+
 async function nextRound(){
   const room=S.room;
   const nextRoundNum=(room.currentRound||1)+1;
