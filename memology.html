@@ -724,16 +724,14 @@ function unsubscribeRoom(){
   clearInterval(_pollIv);
 }
 
-// {a:{b:1}} → {"a/b":1}. Пустой объект сохраняется, чтобы сброс submissions работал
-function flattenPatch(obj, prefix=''){
+// Каждое значение пишется целиком, вложенность НЕ разбирается.
+// Причина: jsonb_set создаёт только последний недостающий ключ. Путь
+// players/2/name в комнату без игрока 2 не запишется вообще — родителя нет.
+// Поэтому вложенный путь задаётся явно ключом со слэшем: {'players/2': {...}},
+// и тогда создаётся сам объект игрока, у которого родитель players уже есть.
+function flattenPatch(obj){
   const out = {};
-  for(const k in obj){
-    const key = prefix ? `${prefix}/${k}` : k;
-    const v = obj[k];
-    const isPlainObj = v && typeof v === 'object' && !Array.isArray(v);
-    if(isPlainObj && Object.keys(v).length) Object.assign(out, flattenPatch(v, key));
-    else out[key] = v;
-  }
+  for(const k in obj) out[k] = obj[k];
   return out;
 }
 
@@ -1080,12 +1078,12 @@ async function joinRoom() {
 
   S.roomCode = code;
   await patchRoom({
-    players: { [newIdx]: { name, score:0, idx:newIdx } },
+    [`players/${newIdx}`]: { name, score:0, idx:newIdx },
     playerCount: (existing.playerCount||0) + 1
   });
 
   subscribeRoom(code);
-  showScreen('screen-lobby');
+  showLobby(S.room || existing);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1172,7 +1170,12 @@ function handleRoomUpdate(room){
   const phase=room.phase, isReader=S.myIdx===room.readerIdx;
   const cur=document.querySelector('.screen.active')?.id;
 
-  if(phase==='lobby'){ if(cur==='screen-lobby'||cur==='screen-welcome') { showLobby(room); } return; }
+  // screen-loading важен: вход в комнату идёт именно с него,
+  // и без него лобби оставалось с заглушкой «????»
+  if(phase==='lobby'){
+    if(cur==='screen-lobby'||cur==='screen-welcome'||cur==='screen-loading') showLobby(room);
+    return;
+  }
   if(phase==='reader'){
     if(isReader && cur!=='screen-reader') showReaderScreen(room);
     else if(!isReader && cur!=='screen-waiting-sit') showWaitingSit(room);
