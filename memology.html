@@ -544,7 +544,8 @@ input[type=text]:focus{border-color:var(--accent3)}
   <div style="text-align:center;max-width:680px;width:100%">
     <div style="font-size:.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:8px;font-weight:700">🏆 Итог раунда</div>
     <div id="result-winner-area" style="margin-bottom:20px"></div>
-    <div class="table-grid" id="result-all-cards" style="margin-bottom:24px;justify-content:center"></div>
+    <div class="table-grid" id="result-all-cards" style="margin-bottom:18px;justify-content:center"></div>
+    <div id="tiebreak-note" style="display:none;background:rgba(255,61,107,.1);border:1px solid rgba(255,61,107,.35);border-radius:14px;padding:14px 18px;margin-bottom:20px;font-size:.88rem;line-height:1.6"></div>
     <div style="display:flex;gap:11px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-secondary" onclick="showLiveScores()">📊 Счёт</button>
       <button class="btn btn-cyan" id="next-round-btn">➡️ Следующий раунд</button>
@@ -839,6 +840,13 @@ function toast(msg,dur=2600){const el=document.getElementById('toast');el.textCo
 function shuffle(a){const arr=[...a];for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr}
 function genCode(){return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('')}
 function roundsLabel(r){return r===9999?'∞':r}
+
+// После ничьей играются дополнительные раунды — «РАУНД 7/5» выглядел бы странно
+function roundText(room){
+  const r = room.currentRound || 1, total = room.rounds;
+  if(total !== 9999 && r > total) return `ДОП. РАУНД ${r - total}`;
+  return `РАУНД ${r}/${roundsLabel(total)}`;
+}
 
 // ═══════════════════════════════════════════════════
 //  ПРОСМОТР МЕМА В ПОЛНЫЙ РАЗМЕР
@@ -1157,11 +1165,10 @@ function showLobby(room){
 function renderLobbySlots(room){
   const max=room.maxPlayers||10;
   const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx);
-  const scores=room.scores||{};
   const filled=players.map(p=>`
     <div class="player-slot ${p.idx===S.myIdx?'me':''}">
       <div class="slot-avatar" style="background:${COLORS[p.idx]}18;color:${COLORS[p.idx]}">${AVATARS[p.idx]}</div>
-      <div class="slot-name">${p.name} <span style="color:var(--muted);font-size:.72rem;font-weight:400">(${scores[p.idx]||0} очк.)</span></div>
+      <div class="slot-name">${p.name} <span style="color:var(--muted);font-size:.72rem;font-weight:400">(${p.score||0} очк.)</span></div>
       ${p.idx===0?'<span class="slot-badge badge-host">Хост</span>':''}
       ${p.idx===S.myIdx?'<span class="slot-badge badge-you">Ты</span>':''}
     </div>`).join('');
@@ -1264,7 +1271,7 @@ function handleRoomUpdate(room){
 //  READER
 // ═══════════════════════════════════════════════════
 function showReaderScreen(room){
-  document.getElementById('reader-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  document.getElementById('reader-round-badge').textContent=roundText(room);
   const sits=room.readerSits||['',''];
   _flipped = false;
   const card = document.getElementById('dual-card');
@@ -1324,7 +1331,7 @@ function showWaitingSit(room){
 //  PICK SCREEN
 // ═══════════════════════════════════════════════════
 function showPickScreen(room){
-  document.getElementById('pick-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  document.getElementById('pick-round-badge').textContent=roundText(room);
   document.getElementById('pick-sit-text').textContent=room.situation;
   S.selectedHandIdx=null;
   document.getElementById('submit-btn').disabled=true;
@@ -1450,7 +1457,6 @@ function renderPokerTable(containerId, room, phase){
   if(!el || !room) return;
   const players = Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx);
   const subs = room.submissions||{};
-  const scores = room.scores||{};
   const n = players.length;
   if(!n) return;
   const cx = 50, cy = 50, rx = 44, ry = 40;
@@ -1466,7 +1472,7 @@ function renderPokerTable(containerId, room, phase){
     const isReader = p.idx === room.readerIdx;
     const hasDone = subs[p.idx] !== undefined;
     const avatar = AVATARS[p.idx % AVATARS.length];
-    const pts = scores[p.idx] || 0;
+    const pts = p.score || 0;
 
     let avatarClass = 'seat-avatar';
     let statusText = '', statusClass = '';
@@ -1498,7 +1504,7 @@ function renderPokerTable(containerId, room, phase){
 // ═══════════════════════════════════════════════════
 function showWaitingOthers(room){
   if(!room) return;
-  document.getElementById('waiting-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  document.getElementById('waiting-round-badge').textContent=roundText(room);
   document.getElementById('waiting-sit-text2').textContent=room.situation||'—';
   renderPokerTable('poker-table-waiting', room, 'waiting');
   showScreen('screen-waiting-others');
@@ -1546,7 +1552,7 @@ function showWaitingJudge(room){
 //  JUDGE
 // ═══════════════════════════════════════════════════
 function showJudgeScreen(room,revealed){
-  document.getElementById('judge-round-badge').textContent=`РАУНД ${room.currentRound}/${roundsLabel(room.rounds)}`;
+  document.getElementById('judge-round-badge').textContent=roundText(room);
   document.getElementById('judge-sit-text').textContent=room.situation;
   const cards=room.tableCards||[], btn=document.getElementById('judge-confirm-btn');
   S._judgeSelected=null;
@@ -1582,12 +1588,30 @@ function judgeSelect(i){
 }
 async function judgeConfirm(){
   if(S._judgeSelected==null) return;
-  const card=S.room.tableCards[S._judgeSelected];
-  const winnerIdx=card.playerIdx;
-  const playerPatch={};
-  Object.values(S.room.players).forEach(p=>{ playerPatch[`players/${p.idx}/score`]=(p.score||0)+(p.idx===winnerIdx?1:0); });
-  const isLast=S.room.currentRound>=S.room.rounds;
-  await patchRoom({...playerPatch, winnerIdx, phase:isLast?'end':'result'});
+  const card = S.room.tableCards[S._judgeSelected];
+  const winnerIdx = card.playerIdx;
+
+  // Начисляем очко и сразу считаем, чем закончится партия
+  const playerPatch = {};
+  const scores = [];
+  Object.values(S.room.players).forEach(p => {
+    const sc = (p.score||0) + (p.idx === winnerIdx ? 1 : 0);
+    playerPatch[`players/${p.idx}/score`] = sc;
+    scores.push(sc);
+  });
+
+  const top      = Math.max(...scores);
+  const leaders  = scores.filter(v => v === top).length;
+  const lastRound = S.room.currentRound >= S.room.rounds;
+  const tie      = leaders > 1;
+
+  // Победитель должен быть один: при равенстве играем дополнительный раунд
+  await patchRoom({
+    ...playerPatch,
+    winnerIdx,
+    tiebreak: lastRound && tie,
+    phase: (lastRound && !tie) ? 'end' : 'result'
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -1613,6 +1637,17 @@ function showResultScreen(room){
       <div class="tc-title">${tc.title}</div>
       <div class="tc-owner">${p?.name||'?'}${isWin?' 🏆':''}</div></div></div>`;
   }).join('');
+
+  // Партия должна была закончиться, но на вершине несколько игроков
+  const tie = document.getElementById('tiebreak-note');
+  if(room.tiebreak){
+    const top = Math.max(...Object.values(room.players||{}).map(p => p.score||0));
+    const names = Object.values(room.players||{}).filter(p => (p.score||0) === top).map(p => p.name);
+    tie.style.display = 'block';
+    tie.innerHTML = `⚔️ <strong>Ничья!</strong> ${names.join(' и ')} — по ${top}.<br>Играем дополнительный раунд до первого перевеса.`;
+  } else {
+    tie.style.display = 'none';
+  }
 
   const btn=document.getElementById('next-round-btn');
   const hint=document.getElementById('host-only-hint');
@@ -1647,13 +1682,14 @@ async function nextRound(){
     await patchRoom({ phase:'end' });
     return;
   }
+  // Флаг ничьей снимаем — иначе он останется висеть в следующем итоге
   const used=room.usedSituations||[];
   const avail=S.allSituations.filter(s=>!used.includes(s));
   const sitPool=shuffle(avail.length>=2?avail:[...S.allSituations]);
   const sits=[sitPool[0],sitPool[1]||sitPool[0]];
   await patchRoom({ phase:'reader', currentRound:nextRoundNum, readerIdx:nextReaderIdx,
                     situation:'', submissions:{}, tableCards:[], winnerIdx:-1,
-                    readerSits:sits, usedSituations:[...used,...sits] });
+                    readerSits:sits, usedSituations:[...used,...sits], tiebreak:false });
 }
 
 function showLiveScores(){
@@ -1673,7 +1709,10 @@ function showLiveScores(){
 // ═══════════════════════════════════════════════════
 function showEndScreen(room){
   const players=Object.values(room.players||{}).sort((a,b)=>(b.score||0)-(a.score||0));
-  document.getElementById('winner-text').textContent=`🎉 ${players[0].name} победил с ${players[0].score||0} очками!`;
+  const extra = room.rounds !== 9999 && (room.currentRound||1) > room.rounds;
+  document.getElementById('winner-text').textContent =
+    `🎉 ${players[0].name} победил с ${players[0].score||0} очками!` +
+    (extra ? ' (в дополнительном раунде)' : '');
   document.getElementById('final-scoreboard').innerHTML=players.map((p,i)=>`
     <div class="score-row ${i===0?'winner':''}">
       <div class="score-rank">${['🥇','🥈','🥉'][i]||(i+1)+'.'}</div>
