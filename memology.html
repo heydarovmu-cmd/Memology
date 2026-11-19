@@ -1,616 +1,360 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Memology 🔥</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pangolin&family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/game.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Pangolin&family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-/* ═══ DOODLE NOTEBOOK THEME ═══ */
-:root{
-  --bg:#F8F8FF;--card:#FFFFFF;--card2:#FFFFFF;--border:#C9CFE0;
-  --ink:#26323F;
-  --accent:#C2255C;--accent2:#B35C00;--accent3:#1971C2;
-  --green:#2F7D3A;--purple:#7048E8;
-  --text:#26323F;--muted:#5C6B7A;--r:18px;
-  --hl:#FFE066;--pink-s:#FFC9DE;--blue-s:#A5D8FF;--green-s:#B2F2BB;--violet-s:#E5DBFF;--felt:#EBFBEE;
-  --sk1:255px 15px 225px 15px/15px 225px 15px 255px;
-  --sk2:15px 225px 15px 255px/255px 15px 225px 15px;
-  --sk3:225px 15px 255px 15px/15px 255px 15px 225px;
-  --blob:52% 48% 55% 45%/48% 55% 45% 52%;
-  --hand:'Pangolin',cursive;--body:'Balsamiq Sans',sans-serif;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden}
-body::after{content:none}
-.screen{display:none;min-height:100vh;padding:20px;animation:fadeIn .3s ease;position:relative;z-index:1}
-.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
-@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-h1,h2,h3{font-family:var(--hand);font-weight:400}
-h2{font-size:1.35rem}
-.logo{font-family:var(--hand);font-size:clamp(2.6rem,9vw,4.8rem);font-weight:400;color:var(--ink);-webkit-text-fill-color:currentColor;text-align:center;line-height:1.05;letter-spacing:0;text-decoration:underline;text-decoration-color:var(--hl);text-decoration-thickness:.32em;text-underline-offset:-.14em;text-decoration-skip-ink:none}
-.logo-sub{font-family:var(--hand);font-size:1.05rem;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:1px}
-#tagline{color:var(--accent)!important;-webkit-text-fill-color:currentColor!important;background:none!important;font-family:var(--hand)!important;font-weight:400!important}
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border:2.5px solid var(--ink);border-radius:var(--sk3);font-family:var(--hand);font-size:1.1rem;font-weight:400;cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s;text-transform:none;letter-spacing:.3px;color:var(--ink);background:#fff;min-height:44px}
-.btn-primary{background:var(--accent);color:#fff;box-shadow:3px 4px 0 var(--ink)}
-.btn-primary:hover{transform:translate(-1px,-1px) rotate(-.5deg);box-shadow:4px 5px 0 var(--ink)}
-.btn-secondary{background:#fff;color:var(--ink);border-radius:var(--sk2)}
-.btn-secondary:hover{background:var(--bg);transform:rotate(-.5deg)}
-.btn-gold{background:var(--hl);color:var(--ink);box-shadow:3px 4px 0 var(--ink)}
-.btn-gold:hover{transform:translate(-1px,-1px) rotate(.5deg);box-shadow:4px 5px 0 var(--ink)}
-.btn-cyan{background:var(--blue-s);color:var(--ink);border-radius:var(--sk1)}
-.btn-cyan:hover{transform:translate(-1px,-1px) rotate(.5deg);box-shadow:3px 4px 0 var(--ink)}
-.btn-green{background:var(--green-s);color:var(--ink);box-shadow:3px 4px 0 var(--ink)}
-.btn-green:hover{transform:translate(-1px,-1px) rotate(-.5deg);box-shadow:4px 5px 0 var(--ink)}
-.btn:active{transform:translate(2px,2px)!important;box-shadow:1px 1px 0 var(--ink)!important}
-.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
-.room-code-box .btn{font-size:1rem!important}
-/* PANELS */
-.panel{background:var(--card);border:2.5px solid var(--ink);border-radius:var(--sk1);padding:26px;max-width:520px;width:100%}
-.divider{height:0;border-top:2px dashed var(--border);margin:18px 0;width:100%}
-/* INPUT */
-input[type=text],textarea{width:100%;background:var(--bg);border:2.5px solid var(--ink);border-radius:var(--sk2);padding:12px 16px;color:var(--text);font-family:var(--body);font-size:1rem;outline:none;transition:box-shadow .2s}
-input[type=text]::placeholder,textarea::placeholder{color:#8A96A6}
-input[type=text]:focus,textarea:focus{box-shadow:0 0 0 3px var(--blue-s)}
-/* ROOM CODE */
-.room-code{font-family:var(--hand);font-size:clamp(2.8rem,10vw,4rem);font-weight:400;letter-spacing:12px;text-align:center;color:var(--ink);-webkit-text-fill-color:currentColor;background:none;padding:8px 0 4px}
-.room-code-box{position:relative;background:#fff;border:2.5px solid var(--ink);border-radius:var(--sk1);padding:22px 16px 16px;text-align:center;margin:18px 0 14px;transform:rotate(-1deg)}
-.room-code-box::before{content:'';position:absolute;top:-13px;left:50%;width:88px;height:24px;margin-left:-44px;background:rgba(255,224,102,.85);transform:rotate(3deg)}
-/* PLAYER SLOTS */
-.player-slots{display:flex;flex-direction:column;gap:9px;width:100%;max-width:400px;margin:12px 0}
-.player-slot{display:flex;align-items:center;gap:12px;background:#fff;border:2px solid var(--ink);border-radius:var(--sk1);padding:9px 14px;transition:all .25s;text-align:left}
-.player-slot:nth-child(3n+2){border-radius:var(--sk2)}
-.player-slot:nth-child(3n){border-radius:var(--sk3)}
-.player-slot.me{background:#FFF0F6;border-color:var(--accent)}
-.slot-avatar{width:38px;height:38px;border-radius:var(--blob);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-family:var(--hand);flex-shrink:0}
-.slot-name{font-weight:700;font-size:.95rem}
-.slot-badge{margin-left:auto;font-family:var(--hand);font-size:.85rem;padding:2px 10px;border-radius:var(--sk2);border:2px solid var(--ink);color:var(--ink)}
-.slot-badge+.slot-badge{margin-left:6px}
-.badge-host{background:var(--hl)}
-.badge-you{background:var(--blue-s)}
-/* NUM BUTTONS */
-.num-grid{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
-.num-btn{min-width:58px;height:58px;border-radius:var(--sk1);border:2.5px solid var(--ink);background:#fff;color:var(--ink);font-family:var(--hand);font-size:1.4rem;font-weight:400;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;padding:0 10px}
-.num-btn:nth-child(even){border-radius:var(--sk2)}
-.num-btn:hover{background:#FFF0F6;transform:rotate(-2deg)}
-.num-btn.selected{background:var(--accent);color:#fff;box-shadow:3px 4px 0 var(--ink);transform:rotate(-2deg)}
-/* DUAL CARD */
-.dual-card{width:min(320px,88vw);border-radius:var(--sk1);overflow:hidden;box-shadow:5px 6px 0 var(--ink);margin:0 auto;border:3px solid var(--ink);background:#fff;transition:transform .55s cubic-bezier(.45,.05,.2,1)}
-.dual-card.flipped{transform:rotate(180deg)}
-.sit-half .sit-tap{font-family:var(--hand);font-size:.85rem;letter-spacing:.5px;font-weight:400;opacity:.7;margin-top:2px}
-.sit-half{padding:26px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;cursor:pointer;transition:filter .18s,opacity .28s;position:relative;gap:10px}
-.sit-half:hover{filter:brightness(.97)}
-.sit-half.top{background:#FFF0F6}
-.sit-half.bottom{background:#E7F5FF;transform:rotate(180deg)}
-.sit-label{font-family:var(--hand);font-size:1rem;letter-spacing:.5px;font-weight:400;opacity:1}
-.sit-half.top .sit-label{color:var(--accent)}
-.sit-half.bottom .sit-label{color:var(--accent3)}
-.sit-text{font-family:var(--hand);font-size:clamp(1.05rem,3.4vw,1.25rem);font-weight:400;line-height:1.4;text-align:center}
-.sit-half.top .sit-text,.sit-half.bottom .sit-text{color:var(--ink)}
-.sit-divider{height:3px;background:repeating-linear-gradient(90deg,var(--ink) 0 10px,transparent 10px 18px)}
-.sit-half.not-chosen{opacity:.22;pointer-events:none}
-/* SIT DISPLAY */
-.sit-display{position:relative;background:#fff;border:2.5px solid var(--ink);border-radius:var(--sk1);padding:20px 20px 16px;margin:6px 0 18px;text-align:center;transform:rotate(-.6deg)}
-.sit-display::before{content:'';position:absolute;top:-12px;left:50%;width:80px;height:22px;margin-left:-40px;background:rgba(255,224,102,.85);transform:rotate(3deg)}
-.sit-display-label{font-family:var(--hand);font-size:.95rem;letter-spacing:.5px;color:var(--accent);margin-bottom:6px;font-weight:400}
-.sit-display-text{font-family:var(--hand);font-size:clamp(1.1rem,3.4vw,1.35rem);font-weight:400;line-height:1.4;color:var(--ink)}
-/* HAND CARDS */
-.hand-area{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:660px;width:100%;padding-top:6px}
-.hand-card{background:#fff;border:2.5px solid var(--ink);border-radius:var(--sk2);cursor:pointer;transition:all .2s;text-align:center;width:110px;overflow:hidden;padding:5px;transform:rotate(-1.5deg)}
-.hand-card:nth-child(even){border-radius:var(--sk1);transform:rotate(1.5deg)}
-.hand-card:hover{transform:translateY(-4px) rotate(0);box-shadow:3px 4px 0 var(--ink)}
-.hand-card.selected-hand{border:3px solid var(--accent);background:#FFF0F6;transform:translateY(-10px) rotate(0);box-shadow:3px 5px 0 var(--ink)}
-.hand-card img{width:100%;height:78px;object-fit:cover;display:block;border-radius:8px}
-.hand-card-title{font-size:.72rem;padding:6px 4px 2px;color:var(--muted);font-weight:700;line-height:1.3}
-/* TABLE CARDS */
-.table-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:740px;width:100%}
-.table-card{background:#fff;border:2.5px solid var(--ink);border-radius:var(--sk1);transition:all .28s;text-align:center;width:138px;position:relative;overflow:hidden;padding:5px}
-.table-card:nth-child(even){border-radius:var(--sk2)}
-.table-card.face-down{cursor:pointer;min-height:120px;background:repeating-linear-gradient(135deg,#FFE3EE 0 10px,#FFD3E3 10px 20px)}
-.table-card.face-down:nth-child(even){background:repeating-linear-gradient(135deg,#E7F5FF 0 10px,#D0EBFF 10px 20px)}
-.table-card.face-down .tc-inner{visibility:hidden}
-.table-card.face-down::after{content:'?';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--hand);font-size:3rem;color:var(--ink)}
-.table-card.face-up{cursor:pointer}
-.table-card.face-up:hover{transform:translateY(-5px) rotate(-1deg);box-shadow:3px 4px 0 var(--ink)}
-.table-card.winning{border:3px solid var(--ink)!important;box-shadow:4px 5px 0 var(--ink)!important;background:var(--hl)!important;transform:translateY(-8px) rotate(-1.5deg)!important}
-.table-card img{width:100%;height:90px;object-fit:cover;display:block;border-radius:8px}
-.tc-title{font-size:.76rem;padding:7px 4px 4px;font-weight:700;color:var(--text);line-height:1.3}
-.tc-owner{font-family:var(--hand);font-size:.9rem;color:var(--muted);padding-bottom:4px}
-@keyframes flipIn{from{transform:rotateY(90deg);opacity:0}to{transform:rotateY(0);opacity:1}}
-.flip-in{animation:flipIn .38s ease both}
-/* STATUS */
-.status-list{display:flex;flex-direction:column;gap:7px;width:100%;max-width:370px}
-.status-row{display:flex;align-items:center;gap:11px;background:#fff;border:2px solid var(--ink);border-radius:var(--sk2);padding:10px 14px}
-.status-dot{width:12px;height:12px;border-radius:var(--blob);border:2px solid var(--ink);flex-shrink:0;transition:all .3s}
-.status-dot.waiting{background:#fff}
-.status-dot.done{background:var(--green-s)}
-/* SCOREBOARD */
-.scoreboard{display:flex;flex-direction:column;gap:10px;width:100%;max-width:460px}
-.score-row{display:flex;align-items:center;gap:14px;background:#fff;border-radius:var(--sk1);padding:12px 18px;border:2px solid var(--ink);text-align:left}
-.score-row:nth-child(even){border-radius:var(--sk2)}
-.score-row.winner{background:var(--hl);border-width:2.5px;box-shadow:3px 4px 0 var(--ink);transform:rotate(-1deg)}
-.score-rank{font-family:var(--hand);font-size:1.4rem;font-weight:400;width:32px;text-align:center}
-.score-name{flex:1;font-weight:700;font-size:.95rem}
-.score-pts{font-family:var(--hand);font-weight:400;font-size:1.4rem;color:var(--accent)}
-.score-row.winner .score-pts{color:var(--ink)}
-/* BADGES */
-.round-badge{background:transparent;border:2px solid var(--accent);border-radius:var(--sk1);padding:3px 12px;font-size:1rem;font-family:var(--hand);font-weight:400;color:var(--accent);letter-spacing:.5px;transform:rotate(-2deg)}
-.phase-badge{border-radius:var(--sk2);padding:3px 12px;font-size:1rem;font-family:var(--hand);font-weight:400;letter-spacing:.5px;border-width:2px!important}
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(38,50,63,.55);z-index:1000;align-items:center;justify-content:center;padding:20px}
-.modal-overlay.open{display:flex}
-.modal,.modal-box{background:var(--bg);border:3px solid var(--ink);border-radius:var(--sk1);padding:26px;max-width:440px;width:100%;text-align:center;box-shadow:5px 6px 0 var(--ink);animation:popIn .28s cubic-bezier(.34,1.56,.64,1)}
-@keyframes popIn{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
-/* TOAST */
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--hl);color:var(--ink);border:2.5px solid var(--ink);border-radius:var(--sk3);padding:10px 22px;font-family:var(--hand);font-size:1.05rem;font-weight:400;z-index:2000;transition:transform .28s;white-space:nowrap;pointer-events:none;box-shadow:3px 4px 0 var(--ink)}
-.toast.show{transform:translateX(-50%) translateY(0)}
-/* LOADING */
-.loading-dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
-.loading-dots span{width:10px;height:10px;border-radius:var(--blob);background:var(--accent);animation:dotPulse 1.4s infinite}
-.loading-dots span:nth-child(2){animation-delay:.2s}
-.loading-dots span:nth-child(3){animation-delay:.4s}
-@keyframes dotPulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-.pulsing{animation:pulse 1.5s infinite}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-/* HAMBURGER MENU */
-.hamburger-btn{position:fixed;top:14px;left:14px;z-index:300;background:#fff;border:2.5px solid var(--ink);border-radius:var(--sk2);width:44px;height:44px;display:none;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer}
-.hamburger-btn.visible{display:flex}
-.hamburger-btn span{display:block;width:20px;height:2.5px;background:var(--ink);border-radius:2px;transition:all .2s}
-.hamburger-btn span:nth-child(2){width:16px;margin-right:4px}
-.side-menu-overlay{position:fixed;inset:0;background:rgba(38,50,63,.45);z-index:400;opacity:0;pointer-events:none;transition:opacity .25s}
-.side-menu-overlay.open{opacity:1;pointer-events:all}
-.side-menu{position:fixed;top:0;left:-290px;width:270px;height:100%;background:var(--bg);border-right:3px solid var(--ink);z-index:401;transition:left .25s;padding:64px 0 20px;display:flex;flex-direction:column}
-.side-menu.open{left:0}
-.side-menu-header{padding:0 20px 16px;border-bottom:2px dashed var(--border);margin-bottom:8px}
-.side-menu-title{font-family:var(--hand);font-size:1.7rem;font-weight:400;color:var(--ink);text-decoration:underline;text-decoration-color:var(--hl);text-decoration-thickness:.32em;text-underline-offset:-.14em;text-decoration-skip-ink:none}
-.side-menu-room{font-size:.85rem;color:var(--muted);margin-top:4px}
-.side-menu-item{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;transition:background .15s;font-family:var(--hand);font-weight:400;font-size:1.2rem;border:none;background:none;color:var(--ink);width:100%;text-align:left}
-.side-menu-item:hover{background:#fff}
-.side-menu-item.danger{color:var(--accent)}
-.side-menu-item-icon{font-size:1.1rem;width:24px;text-align:center}
-/* SUGGEST MODAL */
-.suggest-options{display:flex;flex-direction:column;gap:10px;margin-top:14px}
-.suggest-opt{background:#fff;border:2px solid var(--ink);border-radius:var(--sk1);padding:14px 16px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;font-family:var(--body);font-weight:700;font-size:.92rem;color:var(--ink);transition:all .2s}
-.suggest-opt:nth-child(even){border-radius:var(--sk2)}
-.suggest-opt:hover{background:#E7F5FF;transform:rotate(-.5deg)}
-.suggest-opt-icon{font-size:1.3rem}
-.poker-table-wrap{display:flex;justify-content:center;align-items:center;margin:18px 0;min-height:300px}
-.poker-table{position:relative;width:min(760px,96vw);height:clamp(250px,42vw,320px)}
-/* Стол: нарисованный овал на светлом «сукне» */
-.poker-table::before{
-  content:'';position:absolute;inset:0;
-  border-radius:48% 52% 50% 50%/50% 46% 54% 50%;
-  background:var(--felt);
-  border:3px solid var(--ink);
-}
-.poker-table::after{
-  content:'';position:absolute;inset:16px;
-  border-radius:52% 48% 50% 50%/46% 52% 48% 54%;
-  border:2px dashed #8CC99A;
-  pointer-events:none;
-}
-.poker-logo{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-3deg);
-  font-family:var(--hand);font-size:clamp(1.2rem,4.4vw,2rem);font-weight:400;
-  letter-spacing:3px;color:rgba(47,125,58,.28);
-  white-space:nowrap;pointer-events:none;user-select:none;
-}
-.poker-seat{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;transform:translate(-50%,-50%);z-index:2}
-.seat-avatar{width:clamp(48px,9vw,60px);height:clamp(48px,9vw,60px);border-radius:var(--blob);display:flex;align-items:center;justify-content:center;font-size:clamp(1.5rem,4.4vw,1.9rem);border:2.5px solid var(--ink);background:#fff;transition:all .3s}
-.seat-avatar.me{box-shadow:0 0 0 3px var(--bg),0 0 0 5.5px var(--accent)}
-.seat-avatar.reader-seat{background:var(--hl)}
-.seat-avatar.done{background:var(--green-s)}
-.seat-avatar.thinking{background:#FFF9DB;animation:pulse 1.2s infinite}
-.seat-name{font-size:.72rem;font-weight:700;color:var(--ink);max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;background:#fff;border:1.5px solid var(--ink);padding:1px 8px;border-radius:var(--sk2)}
-.seat-status{font-family:var(--hand);font-size:.82rem;font-weight:400;letter-spacing:.3px;padding:0 6px;border-radius:6px;white-space:nowrap;background:rgba(248,248,255,.85)}
-.seat-status.done{color:var(--green)}
-.seat-status.thinking{color:var(--accent2)}
-.seat-status.reader-lbl{color:var(--purple)}
-/* ПРОСМОТР МЕМА В ПОЛНЫЙ РАЗМЕР */
-.lb{display:none;position:fixed;inset:0;z-index:1500;background:rgba(248,248,255,.97);
-    align-items:center;justify-content:center;
-    padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
-.lb.open{display:flex;animation:fadeIn .18s ease}
-.lb-inner{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:min(920px,96vw);width:100%}
-/* Картинки бывают любых пропорций — вписываем целиком, не обрезая и не растягивая */
-.lb-img{max-width:100%;max-height:64vh;width:auto;height:auto;object-fit:contain;
-        border-radius:12px;border:3px solid var(--ink);box-shadow:5px 6px 0 var(--ink);background:#fff;display:block}
-.lb-title{font-family:var(--hand);font-size:1.3rem;font-weight:400;text-align:center;line-height:1.4;color:var(--ink)}
-.lb-sub{font-size:.85rem;color:var(--muted);text-align:center;margin-top:-6px}
-.lb-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-.lb-x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:14px;
-      background:#fff;border:2.5px solid var(--ink);color:var(--ink);
-      border-radius:var(--sk2);width:44px;height:44px;font-size:1.1rem;cursor:pointer}
-.hand-card,.table-card.face-up{-webkit-tap-highlight-color:transparent}
-/* PREVIEW MODE */
-.pv-bar{position:fixed;left:0;right:0;bottom:0;z-index:900;background:#fff;border-top:3px solid var(--ink);padding:9px 10px calc(9px + env(safe-area-inset-bottom,0px));display:none}
-.pv-bar.on{display:block}
-.pv-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:0 2px}
-.pv-tag{font-family:var(--hand);font-size:.95rem;font-weight:400;letter-spacing:.5px;color:var(--ink);background:var(--hl);border:2px solid var(--ink);padding:1px 10px;border-radius:var(--sk2)}
-.pv-hint{font-size:.75rem;color:var(--muted)}
-.pv-x{margin-left:auto;background:#fff;border:2px solid var(--ink);color:var(--ink);border-radius:var(--sk1);width:30px;height:30px;font-size:.85rem;cursor:pointer;flex-shrink:0}
-.pv-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch}
-.pv-scroll::-webkit-scrollbar{height:3px}
-.pv-btn{flex-shrink:0;background:#fff;border:2px solid var(--ink);color:var(--ink);border-radius:var(--sk1);padding:6px 13px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--body);transition:all .15s}
-.pv-btn:hover{background:#E7F5FF}
-.pv-btn.act{background:var(--hl)}
-.pv-open{position:fixed;right:14px;bottom:14px;z-index:900;background:var(--hl);color:var(--ink);border:2.5px solid var(--ink);border-radius:var(--sk3);padding:9px 16px;font-family:var(--hand);font-size:1rem;font-weight:400;letter-spacing:.3px;cursor:pointer;display:none;box-shadow:3px 4px 0 var(--ink)}
-.pv-open.on{display:block}
-/* CONFETTI */
-.confetti-container{position:fixed;inset:0;pointer-events:none;z-index:500;overflow:hidden}
-.confetti-piece{position:absolute;top:-20px;animation:fall linear forwards}
-@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
-</style>
+<script type="module" src="js/game/main.js"></script>
 </head>
 <body>
 
-<!-- HAMBURGER BUTTON -->
-<button class="hamburger-btn" id="hamburger-btn" onclick="toggleMenu()">
+<!-- ═══ МЕНЮ ═══ -->
+<button class="hamburger-btn" id="hamburger-btn" data-action="toggleMenu" aria-label="Меню">
   <span></span><span></span><span></span>
 </button>
-
-<!-- SIDE MENU OVERLAY -->
-<div class="side-menu-overlay" id="menu-overlay" onclick="closeMenu()"></div>
-
-<!-- SIDE MENU -->
-<div class="side-menu" id="side-menu">
+<div class="side-menu-overlay" id="menu-overlay" data-action="closeMenu"></div>
+<nav class="side-menu" id="side-menu">
   <div class="side-menu-header">
     <div class="side-menu-title">Memology 🎭</div>
     <div class="side-menu-room" id="menu-room-info">Комната: —</div>
   </div>
-  <button class="side-menu-item" onclick="openSuggest()">
+  <button class="side-menu-item" data-action="openSuggest">
     <span class="side-menu-item-icon">💡</span> Предложить
   </button>
-  <button class="side-menu-item danger" onclick="leaveGame()">
+  <button class="side-menu-item danger" data-action="leaveGame">
     <span class="side-menu-item-icon">🚪</span> Выйти из игры
   </button>
-</div>
+</nav>
 
-<!-- SUGGEST MODAL -->
-<div class="modal-overlay" id="modal-suggest" onclick="if(event.target===this)closeModal('modal-suggest')">
-  <div class="modal-box" style="max-width:380px">
-    <h3 style="font-size:1rem;margin-bottom:6px">💡 Предложить</h3>
-    <p style="color:var(--muted);font-size:.82rem;margin-bottom:4px">Что хочешь предложить?</p>
-    <div id="suggest-step1">
-      <div class="suggest-options">
-        <button class="suggest-opt" onclick="openSuggestForm('situation')">
-          <span class="suggest-opt-icon">📋</span>
-          <div><div style="font-weight:700">Предложить ситуацию</div><div style="font-size:.74rem;color:var(--muted);font-weight:400;margin-top:2px">Новая карточка для игры</div></div>
-        </button>
-        <button class="suggest-opt" onclick="openSuggestForm('meme')">
-          <span class="suggest-opt-icon">🖼️</span>
-          <div><div style="font-weight:700">Предложить мем</div><div style="font-size:.74rem;color:var(--muted);font-weight:400;margin-top:2px">Ссылка или описание</div></div>
-        </button>
-        <button class="suggest-opt" onclick="openSuggestForm('other')">
-          <span class="suggest-opt-icon">✏️</span>
-          <div><div style="font-weight:700">Другое</div><div style="font-size:.74rem;color:var(--muted);font-weight:400;margin-top:2px">Любое предложение</div></div>
-        </button>
-      </div>
+<!-- ═══ ГЛАВНАЯ ═══ -->
+<section class="screen active" id="screen-welcome">
+  <div class="welcome">
+    <div class="tagline-box">
+      <div id="tagline-wrap"><div id="tagline">✨ There's nothing a good meme can't solve ✨</div></div>
     </div>
-    <div id="suggest-step2" style="display:none">
-      <div style="font-size:.78rem;color:var(--accent3);margin-bottom:10px;font-weight:700" id="suggest-form-label"></div>
-      <textarea id="suggest-text" placeholder="Напиши здесь..." rows="4" style="font-size:.85rem;resize:none"></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-secondary" onclick="backSuggest()" style="flex:1;justify-content:center">← Назад</button>
-        <button class="btn btn-green" onclick="submitSuggest()" style="flex:1;justify-content:center">📨 Отправить</button>
-      </div>
-    </div>
-    <button class="btn btn-secondary" onclick="closeModal('modal-suggest')" style="width:100%;justify-content:center;margin-top:12px">Отмена</button>
-  </div>
-</div>
-
-<!-- WELCOME -->
-<div class="screen active" id="screen-welcome">
-  <div style="text-align:center;max-width:460px;width:100%">
-    <div style="margin-bottom:16px;overflow:hidden">
-      <div id="tagline-wrap" style="display:inline-block;width:100%">
-        <div id="tagline" style="font-family:'Balsamiq Sans',sans-serif;font-weight:800;font-style:italic;white-space:nowrap;color:transparent;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent3));-webkit-background-clip:text;background-clip:text;opacity:.9;display:inline-block;transform-origin:center top">✨ There's nothing a good meme can't solve ✨</div>
-      </div>
-    </div>
-    <div style="font-size:3.8rem;margin-bottom:12px">🎭</div>
+    <div class="welcome-emoji">🎭</div>
     <div class="logo" id="main-logo">Memology</div>
     <div class="divider"></div>
-    <div style="display:flex;flex-direction:column;gap:11px;align-items:center">
-      <button class="btn btn-primary" onclick="showScreen('screen-create')" style="font-size:.95rem;padding:15px 42px">🏠 Создать комнату</button>
-      <button class="btn btn-cyan" onclick="showScreen('screen-join')" style="font-size:.95rem;padding:15px 42px">🔗 Войти в комнату</button>
-      <button class="btn btn-secondary" onclick="openModal('modal-howto')">📖 Как играть</button>
-      <button onclick="showAdminEntry()" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;padding:8px;margin-top:4px;opacity:.3">⚙️</button>
+    <div class="welcome-actions">
+      <button class="btn btn-primary btn-big" data-action="show" data-screen="screen-create">🏠 Создать комнату</button>
+      <button class="btn btn-cyan btn-big" data-action="show" data-screen="screen-join">🔗 Войти в комнату</button>
+      <button class="btn btn-secondary" data-action="openModal" data-modal="modal-howto">📖 Как играть</button>
+      <button class="admin-gear" data-action="adminEntry" aria-label="Администратор">⚙️</button>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ADMIN PIN -->
-<div class="screen" id="screen-admin-pin">
-  <div class="panel" style="max-width:320px;text-align:center">
-    <div style="font-size:2rem;margin-bottom:10px">🔐</div>
-    <h2 style="font-size:1rem;margin-bottom:6px">Администратор</h2>
-    <p style="color:var(--muted);font-size:.82rem;margin-bottom:20px">Введи PIN-код</p>
-    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:22px">
-      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d0"></div>
-      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d1"></div>
-      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d2"></div>
-      <div style="width:14px;height:14px;border-radius:50%;background:var(--border);transition:background .15s" id="pin-d3"></div>
+<!-- ═══ PIN АДМИНИСТРАТОРА ═══ -->
+<section class="screen" id="screen-admin-pin">
+  <div class="panel pin-panel">
+    <div class="pin-icon">🔐</div>
+    <h2 class="pin-title">Администратор</h2>
+    <p class="pin-hint">Введи PIN-код</p>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pin-d0"></div><div class="pin-dot" id="pin-d1"></div>
+      <div class="pin-dot" id="pin-d2"></div><div class="pin-dot" id="pin-d3"></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:220px;margin:0 auto 14px">
-      <button class="num-btn" onclick="pinPress('1')" style="height:52px;font-size:1.2rem">1</button>
-      <button class="num-btn" onclick="pinPress('2')" style="height:52px;font-size:1.2rem">2</button>
-      <button class="num-btn" onclick="pinPress('3')" style="height:52px;font-size:1.2rem">3</button>
-      <button class="num-btn" onclick="pinPress('4')" style="height:52px;font-size:1.2rem">4</button>
-      <button class="num-btn" onclick="pinPress('5')" style="height:52px;font-size:1.2rem">5</button>
-      <button class="num-btn" onclick="pinPress('6')" style="height:52px;font-size:1.2rem">6</button>
-      <button class="num-btn" onclick="pinPress('7')" style="height:52px;font-size:1.2rem">7</button>
-      <button class="num-btn" onclick="pinPress('8')" style="height:52px;font-size:1.2rem">8</button>
-      <button class="num-btn" onclick="pinPress('9')" style="height:52px;font-size:1.2rem">9</button>
-      <button class="num-btn" onclick="pinClear()" style="height:52px;font-size:.85rem;color:var(--muted)">C</button>
-      <button class="num-btn" onclick="pinPress('0')" style="height:52px;font-size:1.2rem">0</button>
-      <button class="num-btn" onclick="pinBack()" style="height:52px;font-size:1rem">⌫</button>
+    <div class="pin-pad">
+      <button class="num-btn" data-action="pinPress" data-digit="1">1</button>
+      <button class="num-btn" data-action="pinPress" data-digit="2">2</button>
+      <button class="num-btn" data-action="pinPress" data-digit="3">3</button>
+      <button class="num-btn" data-action="pinPress" data-digit="4">4</button>
+      <button class="num-btn" data-action="pinPress" data-digit="5">5</button>
+      <button class="num-btn" data-action="pinPress" data-digit="6">6</button>
+      <button class="num-btn" data-action="pinPress" data-digit="7">7</button>
+      <button class="num-btn" data-action="pinPress" data-digit="8">8</button>
+      <button class="num-btn" data-action="pinPress" data-digit="9">9</button>
+      <button class="num-btn pin-small" data-action="pinClear">C</button>
+      <button class="num-btn" data-action="pinPress" data-digit="0">0</button>
+      <button class="num-btn pin-back" data-action="pinBack" aria-label="Стереть">⌫</button>
     </div>
-    <div style="color:var(--accent);font-size:.8rem;min-height:18px;margin-bottom:10px" id="pin-error"></div>
-    <button class="btn btn-secondary" onclick="showScreen('screen-welcome')" style="width:100%;justify-content:center">← Назад</button>
+    <div class="pin-error" id="pin-error"></div>
+    <button class="btn btn-secondary btn-wide" data-action="show" data-screen="screen-welcome">← Назад</button>
   </div>
-</div>
+</section>
 
-<!-- CREATE ROOM -->
-<div class="screen" id="screen-create">
+<!-- ═══ СОЗДАНИЕ КОМНАТЫ ═══ -->
+<section class="screen" id="screen-create">
   <div class="panel">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
-      <button class="btn btn-secondary" onclick="showScreen('screen-welcome')" style="padding:9px 13px">←</button>
-      <h2 style="font-size:.95rem">Создать комнату</h2>
+    <div class="screen-head">
+      <button class="btn btn-secondary btn-back" data-action="show" data-screen="screen-welcome" aria-label="Назад">←</button>
+      <h2>Создать комнату</h2>
     </div>
-    <div style="margin-bottom:18px">
-      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">👤 Твоё имя</div>
-      <input type="text" id="host-name" placeholder="Введи своё имя..." maxlength="20">
+    <div class="field">
+      <label class="field-label" for="host-name">👤 Твоё имя</label>
+      <input type="text" id="host-name" placeholder="Введи своё имя..." maxlength="20" autocomplete="nickname">
     </div>
-    <div style="margin-bottom:22px">
-      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">👥 Число игроков</div>
+    <div class="field field-lg">
+      <div class="field-label">👥 Число игроков</div>
       <div class="num-grid players-grid">
-        <button class="num-btn" onclick="selectPlayers(3,this)">3</button>
-        <button class="num-btn" onclick="selectPlayers(4,this)">4</button>
-        <button class="num-btn" onclick="selectPlayers(5,this)">5</button>
-        <button class="num-btn" onclick="selectPlayers(6,this)">6</button>
-        <button class="num-btn" onclick="selectPlayers(7,this)">7</button>
-        <button class="num-btn" onclick="selectPlayers(8,this)">8</button>
-        <button class="num-btn" onclick="selectPlayers(9,this)">9</button>
-        <button class="num-btn" onclick="selectPlayers(10,this)">10</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="3">3</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="4">4</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="5">5</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="6">6</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="7">7</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="8">8</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="9">9</button>
+        <button class="num-btn" data-action="selectPlayers" data-value="10">10</button>
       </div>
     </div>
-    <div style="margin-bottom:22px">
-      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">🔄 Число раундов</div>
+    <div class="field field-lg">
+      <div class="field-label">🔄 Число раундов</div>
       <div class="num-grid rounds-grid">
-        <button class="num-btn" onclick="selectRounds(5,this)">5</button>
-        <button class="num-btn" onclick="selectRounds(15,this)">15</button>
-        <button class="num-btn" onclick="selectRounds(25,this)">25</button>
-        <button class="num-btn" onclick="selectRounds(9999,this)" style="font-size:1.6rem">∞</button>
+        <button class="num-btn selected" data-action="selectRounds" data-value="5">5</button>
+        <button class="num-btn" data-action="selectRounds" data-value="15">15</button>
+        <button class="num-btn" data-action="selectRounds" data-value="25">25</button>
+        <button class="num-btn num-inf" data-action="selectRounds" data-value="9999" aria-label="Бесконечно">∞</button>
       </div>
     </div>
-    <button class="btn btn-green" onclick="createRoom()" style="width:100%;justify-content:center;padding:15px;font-size:.9rem">
-      🚀 Создать комнату
-    </button>
+    <button class="btn btn-green btn-wide btn-tall" id="create-btn" data-action="createRoom">🚀 Создать комнату</button>
   </div>
-</div>
+</section>
 
-<!-- JOIN ROOM -->
-<div class="screen" id="screen-join">
-  <div class="panel" style="max-width:380px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
-      <button class="btn btn-secondary" onclick="showScreen('screen-welcome')" style="padding:9px 13px">←</button>
-      <h2 style="font-size:.95rem">Войти в комнату</h2>
+<!-- ═══ ВХОД В КОМНАТУ ═══ -->
+<section class="screen" id="screen-join">
+  <div class="panel panel-narrow">
+    <div class="screen-head">
+      <button class="btn btn-secondary btn-back" data-action="show" data-screen="screen-welcome" aria-label="Назад">←</button>
+      <h2>Войти в комнату</h2>
     </div>
-    <div style="margin-bottom:16px">
-      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">👤 Твоё имя</div>
-      <input type="text" id="join-name" placeholder="Введи своё имя..." maxlength="20">
+    <div class="field field-sm">
+      <label class="field-label" for="join-name">👤 Твоё имя</label>
+      <input type="text" id="join-name" placeholder="Введи своё имя..." maxlength="20" autocomplete="nickname">
     </div>
-    <div style="margin-bottom:22px">
-      <div style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">🔑 Код комнаты</div>
-      <input type="text" id="join-code" placeholder="ABCD" maxlength="4" style="font-family:'Pangolin',cursive;font-size:2rem;font-weight:900;letter-spacing:10px;text-align:center;text-transform:uppercase">
+    <div class="field field-lg">
+      <label class="field-label" for="join-code">🔑 Код комнаты</label>
+      <input type="text" id="join-code" class="code-input" placeholder="ABCD" maxlength="4" autocapitalize="characters" autocomplete="off">
     </div>
-    <button class="btn btn-cyan" onclick="joinRoom()" style="width:100%;justify-content:center;padding:15px;font-size:.9rem">🔗 Войти</button>
+    <button class="btn btn-cyan btn-wide btn-tall" id="join-btn" data-action="joinRoom">🔗 Войти</button>
   </div>
-</div>
+</section>
 
-<!-- LOBBY -->
-<div class="screen" id="screen-lobby">
-  <div style="text-align:center;max-width:440px;width:100%">
-    <div style="font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:700" id="lobby-role-label">ХОСТ</div>
-    <h2 style="font-size:1.15rem;margin-bottom:5px">Комната создана!</h2>
-    <p style="color:var(--muted);font-size:.83rem;margin-bottom:3px">Код для друзей:</p>
+<!-- ═══ ЛОББИ ═══ -->
+<section class="screen" id="screen-lobby">
+  <div class="lobby">
+    <div class="lobby-role" id="lobby-role-label">ХОСТ</div>
+    <h2 class="lobby-title" id="lobby-title">Комната создана!</h2>
+    <p class="lobby-hint">Код для друзей:</p>
     <div class="room-code-box">
       <div class="room-code" id="lobby-code">????</div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
-        <button class="btn btn-secondary" onclick="copyCode()" style="padding:7px 18px;font-size:.68rem">📋 Скопировать</button>
-        <button class="btn btn-primary" onclick="shareRoom()" style="padding:7px 18px;font-size:.68rem">🔗 Поделиться</button>
+      <div class="code-actions">
+        <button class="btn btn-secondary btn-sm" data-action="copyCode">📋 Скопировать</button>
+        <button class="btn btn-primary btn-sm" data-action="shareRoom">🔗 Поделиться</button>
       </div>
     </div>
-    <div style="font-size:.76rem;color:var(--muted);margin-bottom:4px" id="lobby-rounds-label"></div>
-    <div class="player-slots" id="lobby-slots" style="margin:10px auto"></div>
-    <div id="lobby-host-controls" style="display:none;margin-top:14px">
-      <p style="color:var(--muted);font-size:.8rem;margin-bottom:10px" id="lobby-player-hint">Нужно минимум 3 игрока</p>
-      <button class="btn btn-green" onclick="startGame()" id="lobby-start-btn" disabled style="width:100%;justify-content:center;padding:14px">🎮 Начать игру!</button>
+    <div class="lobby-meta" id="lobby-rounds-label"></div>
+    <div class="player-slots" id="lobby-slots"></div>
+    <div class="lobby-controls" id="lobby-host-controls" hidden>
+      <p class="lobby-hint2" id="lobby-player-hint">Нужно минимум 3 игрока</p>
+      <button class="btn btn-green btn-wide btn-start" id="lobby-start-btn" data-action="startGame" disabled>🎮 Начать игру!</button>
     </div>
-    <div id="lobby-guest-wait" style="display:none;margin-top:14px">
-      <p style="color:var(--muted);font-size:.82rem" class="pulsing">Ждём начала от хоста...</p>
+    <div class="lobby-controls" id="lobby-guest-wait" hidden>
+      <p class="lobby-wait pulsing">Ждём начала от хоста...</p>
     </div>
   </div>
-</div>
+</section>
 
-<!-- LOADING CONTENT -->
-<div class="screen" id="screen-loading">
-  <div style="text-align:center">
-    <h2 style="font-size:1.1rem" class="pulsing">Загрузка</h2>
-  </div>
-</div>
+<!-- ═══ ЗАГРУЗКА ═══ -->
+<section class="screen" id="screen-loading">
+  <div class="center"><h2 class="loading-title pulsing">Загрузка</h2></div>
+</section>
 
-<!-- READER -->
-<div class="screen" id="screen-reader">
-  <div style="text-align:center;max-width:380px;width:100%">
-    <div style="font-family:'Pangolin',cursive;font-size:1.15rem;letter-spacing:.5px;color:var(--purple);margin-bottom:5px;text-transform:uppercase">🎤 Твой ход читать!</div>
-    <div style="display:flex;justify-content:center;gap:10px;margin-bottom:16px">
-      <div class="round-badge" id="reader-round-badge">РАУНД 1</div>
-    </div>
-    <p style="color:var(--muted);font-size:.82rem;margin-bottom:18px;line-height:1.6">Зачитай обе ситуации вслух.<br>Нажми на ту, которую выбираешь.</p>
+<!-- ═══ ЧИТАЮЩИЙ ВЫБИРАЕТ СИТУАЦИЮ ═══ -->
+<section class="screen" id="screen-reader">
+  <div class="reader">
+    <div class="reader-title">🎤 Твой ход читать!</div>
+    <div class="badge-row"><div class="round-badge" id="reader-round-badge">РАУНД 1</div></div>
+    <p class="reader-hint-top">Зачитай обе ситуации вслух.<br>Нажми на ту, которую выбираешь.</p>
     <div class="dual-card" id="dual-card"></div>
-    <p style="color:var(--muted);font-size:.7rem;margin-top:13px;line-height:1.5" id="reader-hint">💡 Нажми на перевёрнутую — карточка развернётся</p>
+    <p class="reader-hint" id="reader-hint">💡 Нажми на перевёрнутую — карточка развернётся</p>
   </div>
-</div>
+</section>
 
-<!-- WAITING SITUATION -->
-<div class="screen" id="screen-waiting-sit">
-  <div style="text-align:center;max-width:320px">
-    <div style="font-size:2.8rem;margin-bottom:12px" class="pulsing">⏳</div>
-    <h2 style="font-size:1.05rem;margin-bottom:8px">Ждём ситуацию...</h2>
-    <p style="color:var(--muted);font-size:.85rem;line-height:1.6" id="waiting-sit-text">Читающий выбирает</p>
+<!-- ═══ ЖДЁМ СИТУАЦИЮ ═══ -->
+<section class="screen" id="screen-waiting-sit">
+  <div class="wait">
+    <div class="wait-emoji pulsing">⏳</div>
+    <h2>Ждём ситуацию...</h2>
+    <p id="waiting-sit-text">Читающий выбирает</p>
   </div>
-</div>
+</section>
 
-<!-- PICK MEME — POKER TABLE -->
-<div class="screen" id="screen-pick" style="justify-content:flex-start;padding-top:16px">
-  <div style="width:100%;max-width:700px">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap">
+<!-- ═══ ВЫБОР МЕМА ═══ -->
+<section class="screen screen-top" id="screen-pick">
+  <div class="game-col">
+    <div class="badges">
       <div class="round-badge" id="pick-round-badge">РАУНД 1</div>
-      <div class="phase-badge" style="background:rgba(255,204,0,.1);border:1px solid rgba(255,204,0,.35);color:var(--accent2)">ВЫБЕРИ МЕМ</div>
+      <div class="phase-badge phase-pick">ВЫБЕРИ МЕМ</div>
       <div class="round-badge" id="deck-badge" title="Осталось в колоде">🂠 —</div>
     </div>
     <div class="sit-display">
       <div class="sit-display-label">📋 Ситуация раунда</div>
       <div class="sit-display-text" id="pick-sit-text">—</div>
     </div>
-    <div class="poker-table-wrap">
-      <div class="poker-table" id="poker-table"></div>
-    </div>
-    <p style="color:var(--muted);font-size:.8rem;margin-bottom:10px;text-align:center">🃏 Твои карты — нажми, чтобы рассмотреть:</p>
+    <div class="poker-table-wrap"><div class="poker-table" id="poker-table"></div></div>
+    <p class="hand-hint">🃏 Твои карты — нажми, чтобы рассмотреть:</p>
     <div class="hand-area" id="pick-hand"></div>
-    <div style="margin-top:16px;text-align:center">
-      <button class="btn btn-primary" id="submit-btn" onclick="submitMeme()" disabled>✅ Отправить мем</button>
+    <div class="submit-row">
+      <button class="btn btn-primary" id="submit-btn" data-action="submitMeme" disabled>✅ Отправить мем</button>
     </div>
   </div>
-</div>
+</section>
 
-<!-- WAITING OTHERS — POKER TABLE -->
-<div class="screen" id="screen-waiting-others" style="justify-content:flex-start;padding-top:16px">
-  <div style="width:100%;max-width:700px">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+<!-- ═══ МЕМ ОТПРАВЛЕН ═══ -->
+<section class="screen screen-top" id="screen-waiting-others">
+  <div class="game-col">
+    <div class="badges">
       <div class="round-badge" id="waiting-round-badge">РАУНД 1</div>
-      <div class="phase-badge" style="background:rgba(0,201,122,.1);border:1px solid rgba(0,201,122,.3);color:var(--green)">МЕМ ОТПРАВЛЕН ✅</div>
+      <div class="phase-badge phase-sent">МЕМ ОТПРАВЛЕН ✅</div>
     </div>
     <div class="sit-display">
       <div class="sit-display-label">📋 Ситуация раунда</div>
       <div class="sit-display-text" id="waiting-sit-text2">—</div>
     </div>
-    <div class="poker-table-wrap">
-      <div class="poker-table" id="poker-table-waiting"></div>
-    </div>
-    <p style="color:var(--muted);font-size:.8rem;text-align:center;margin-top:8px" class="pulsing">Ждём остальных игроков...</p>
+    <div class="poker-table-wrap"><div class="poker-table" id="poker-table-waiting"></div></div>
+    <p class="table-hint pulsing">Ждём остальных игроков...</p>
   </div>
-</div>
+</section>
 
-<!-- READER WAITS — POKER TABLE -->
-<div class="screen" id="screen-reader-wait" style="justify-content:flex-start;padding-top:16px">
-  <div style="width:100%;max-width:700px">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+<!-- ═══ ЧИТАЮЩИЙ ЖДЁТ МЕМЫ ═══ -->
+<section class="screen screen-top" id="screen-reader-wait">
+  <div class="game-col">
+    <div class="badges">
       <div class="round-badge" id="reader-wait-round-badge">РАУНД 1</div>
-      <div class="phase-badge" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);color:var(--purple)">🎤 ТЫ ЧИТАЕШЬ</div>
+      <div class="phase-badge phase-reader">🎤 ТЫ ЧИТАЕШЬ</div>
     </div>
-    <div class="sit-display" style="text-align:left">
+    <div class="sit-display sit-display-left">
       <div class="sit-display-label">Ты зачитал ситуацию</div>
       <div class="sit-display-text" id="reader-wait-sit">—</div>
     </div>
-    <div class="poker-table-wrap">
-      <div class="poker-table" id="poker-table-reader"></div>
-    </div>
-    <p style="color:var(--muted);font-size:.8rem;text-align:center;margin-top:8px" class="pulsing">Участники выбирают мемы...</p>
+    <div class="poker-table-wrap"><div class="poker-table" id="poker-table-reader"></div></div>
+    <p class="table-hint pulsing">Участники выбирают мемы...</p>
   </div>
-</div>
+</section>
 
-<!-- JUDGE -->
-<div class="screen" id="screen-judge" style="justify-content:flex-start;padding-top:20px">
-  <div style="width:100%;max-width:760px">
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap">
+<!-- ═══ ГОЛОСОВАНИЕ ═══ -->
+<section class="screen screen-top" id="screen-judge">
+  <div class="game-col">
+    <div class="badges">
       <div class="round-badge" id="judge-round-badge">РАУНД 1</div>
-      <div class="phase-badge" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);color:var(--purple)">ГОЛОСОВАНИЕ</div>
+      <div class="phase-badge phase-reader">ГОЛОСОВАНИЕ</div>
     </div>
-    <div class="sit-display" style="margin-bottom:14px">
+    <div class="sit-display">
       <div class="sit-display-label">📋 Ситуация раунда</div>
       <div class="sit-display-text" id="judge-sit-text">—</div>
     </div>
-    <p style="color:var(--muted);font-size:.83rem;text-align:center;margin-bottom:16px" id="judge-instruction">Нажми чтобы раскрыть мемы!</p>
+    <p class="judge-instruction" id="judge-instruction">Нажми чтобы раскрыть мемы!</p>
     <div class="table-grid" id="judge-table"></div>
-    <div style="margin-top:18px;text-align:center">
-      <button class="btn btn-gold" id="judge-confirm-btn" onclick="judgeConfirm()" disabled style="display:none">🏆 Выбрать этот мем!</button>
+    <div class="confirm-row">
+      <button class="btn btn-gold" id="judge-confirm-btn" data-action="judgeConfirm" disabled hidden>🏆 Выбрать этот мем!</button>
     </div>
   </div>
-</div>
+</section>
 
-<!-- WAITING JUDGE -->
-<div class="screen" id="screen-waiting-judge">
-  <div style="text-align:center;max-width:320px">
-    <div style="font-size:2.8rem;margin-bottom:12px" class="pulsing">🤔</div>
-    <h2 style="font-size:1.05rem;margin-bottom:8px">Голосование...</h2>
-    <p style="color:var(--muted);font-size:.85rem;line-height:1.6" id="waiting-judge-text">Читающий выбирает лучший мем</p>
+<!-- ═══ ЖДЁМ ГОЛОСОВАНИЕ ═══ -->
+<section class="screen" id="screen-waiting-judge">
+  <div class="wait">
+    <div class="wait-emoji pulsing">🤔</div>
+    <h2>Голосование...</h2>
+    <p id="waiting-judge-text">Читающий выбирает лучший мем</p>
   </div>
-</div>
+</section>
 
-<!-- RESULT -->
-<div class="screen" id="screen-result">
-  <div style="text-align:center;max-width:680px;width:100%">
-    <div style="font-size:.65rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:8px;font-weight:700">🏆 Итог раунда</div>
-    <div id="result-winner-area" style="margin-bottom:20px"></div>
-    <div class="table-grid" id="result-all-cards" style="margin-bottom:18px;justify-content:center"></div>
-    <div id="tiebreak-note" style="display:none;background:rgba(255,61,107,.1);border:1px solid rgba(255,61,107,.35);border-radius:14px;padding:14px 18px;margin-bottom:20px;font-size:.88rem;line-height:1.6"></div>
-    <div style="display:flex;gap:11px;justify-content:center;flex-wrap:wrap">
-      <button class="btn btn-secondary" onclick="showLiveScores()">📊 Счёт</button>
-      <button class="btn btn-cyan" id="next-round-btn">➡️ Следующий раунд</button>
+<!-- ═══ ИТОГ РАУНДА ═══ -->
+<section class="screen" id="screen-result">
+  <div class="result">
+    <div class="result-kicker">🏆 Итог раунда</div>
+    <div class="result-winner-area" id="result-winner-area"></div>
+    <div class="table-grid result-cards" id="result-all-cards"></div>
+    <div class="tiebreak-note" id="tiebreak-note" hidden></div>
+    <div class="result-actions">
+      <button class="btn btn-secondary" data-action="showScores">📊 Счёт</button>
+      <button class="btn btn-cyan" id="next-round-btn" data-action="nextRound" hidden>➡️ Следующий раунд</button>
     </div>
-    <div id="host-only-hint" style="display:none;margin-top:10px">
-      <p style="color:var(--muted);font-size:.78rem" class="pulsing">Хост запустит следующий раунд...</p>
+    <div class="host-hint" id="host-only-hint" hidden>
+      <p class="pulsing">Хост запустит следующий раунд...</p>
     </div>
   </div>
-</div>
+</section>
 
-<!-- END -->
-<div class="screen" id="screen-end">
-  <div style="text-align:center;max-width:500px;width:100%">
-    <div style="font-size:3.8rem;margin-bottom:10px">🏆</div>
-    <div class="logo" style="font-size:2.2rem;margin-bottom:6px">ИГРА ОКОНЧЕНА!</div>
-    <div id="winner-text" style="font-size:1.05rem;color:var(--accent2);font-weight:700;margin-bottom:20px"></div>
-    <div class="scoreboard" id="final-scoreboard" style="margin-bottom:24px"></div>
-    <button class="btn btn-primary" onclick="exitToHome()">🏠 Главная</button>
+<!-- ═══ ФИНАЛ ═══ -->
+<section class="screen" id="screen-end">
+  <div class="end">
+    <div class="end-emoji">🏆</div>
+    <div class="logo end-logo">ИГРА ОКОНЧЕНА!</div>
+    <div class="winner-text" id="winner-text"></div>
+    <div class="end-reason" id="end-reason" hidden></div>
+    <div class="scoreboard" id="final-scoreboard"></div>
+    <button class="btn btn-primary" data-action="exitToHome">🏠 Главная</button>
   </div>
   <div class="confetti-container" id="confetti"></div>
-</div>
+</section>
 
-<!-- MODALS -->
-<div class="modal-overlay" id="modal-howto">
+<!-- ═══ ОКНА ═══ -->
+<div class="modal-overlay" id="modal-howto" data-action="closeModalOutside">
   <div class="modal">
-    <h2 style="font-size:1.1rem;margin-bottom:14px">📖 Как играть</h2>
-    <div style="text-align:left;line-height:1.85;font-size:.84rem;color:var(--muted)">
-      <p style="margin-bottom:8px"><strong style="color:var(--text)">1. Хост создаёт комнату</strong> — выбирает имя и раунды. Делится кодом с друзьями.</p>
-      <p style="margin-bottom:8px"><strong style="color:var(--text)">2. Минимум 3 игрока</strong> — каждый входит по коду на своём устройстве.</p>
-      <p style="margin-bottom:8px"><strong style="color:var(--text)">3. Читающий</strong> — каждый раунд другой игрок. Видит карточку с 2 ситуациями (нижняя вверх ногами). Зачитывает обе вслух и выбирает одну.</p>
-      <p style="margin-bottom:8px"><strong style="color:var(--text)">4. Остальные</strong> — видят ситуацию и тайно выбирают один мем из 5.</p>
-      <p style="margin-bottom:8px"><strong style="color:var(--text)">5. Голосование</strong> — мемы перемешаны анонимно. Читающий раскрывает и выбирает лучший.</p>
-      <p><strong style="color:var(--text)">6. Очки</strong> — чей мем выбран, получает очко. Побеждает набравший больше всех!</p>
+    <h2 class="modal-title">📖 Как играть</h2>
+    <div class="howto">
+      <p><strong>1. Хост создаёт комнату</strong> — выбирает имя и раунды. Делится кодом с друзьями.</p>
+      <p><strong>2. Минимум 3 игрока</strong> — каждый входит по коду на своём устройстве.</p>
+      <p><strong>3. Читающий</strong> — каждый раунд другой игрок. Видит карточку с 2 ситуациями (нижняя вверх ногами). Зачитывает обе вслух и выбирает одну.</p>
+      <p><strong>4. Остальные</strong> — видят ситуацию и тайно выбирают один мем из 5.</p>
+      <p><strong>5. Голосование</strong> — мемы перемешаны анонимно. Читающий раскрывает и выбирает лучший.</p>
+      <p><strong>6. Очки</strong> — чей мем выбран, получает очко. Побеждает набравший больше всех!</p>
     </div>
-    <button class="btn btn-primary" onclick="closeModal('modal-howto')" style="margin-top:16px;width:100%;justify-content:center">Понятно! 🎮</button>
+    <button class="btn btn-primary modal-btn" data-action="closeModal" data-modal="modal-howto">Понятно! 🎮</button>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-scores">
+<div class="modal-overlay" id="modal-scores" data-action="closeModalOutside">
   <div class="modal">
-    <h2 style="font-size:1.1rem;margin-bottom:14px">📊 Текущий счёт</h2>
+    <h2 class="modal-title">📊 Текущий счёт</h2>
     <div class="scoreboard" id="live-scoreboard"></div>
-    <button class="btn btn-secondary" onclick="closeModal('modal-scores')" style="margin-top:16px;width:100%;justify-content:center">Закрыть</button>
+    <button class="btn btn-secondary modal-btn" data-action="closeModal" data-modal="modal-scores">Закрыть</button>
   </div>
 </div>
 
-<!-- ПРОСМОТР МЕМА -->
-<div class="lb" id="lb" onclick="if(event.target===this)closeLb()">
-  <button class="lb-x" onclick="closeLb()">✕</button>
+<div class="modal-overlay" id="modal-suggest" data-action="closeModalOutside">
+  <div class="modal-box modal-narrow">
+    <h3 class="suggest-title">💡 Предложить</h3>
+    <p class="suggest-sub">Что хочешь предложить?</p>
+    <div id="suggest-step1">
+      <div class="suggest-options">
+        <button class="suggest-opt" data-action="suggestForm" data-type="situation">
+          <span class="suggest-opt-icon">📋</span>
+          <div><div class="opt-title">Предложить ситуацию</div><div class="opt-sub">Новая карточка для игры</div></div>
+        </button>
+        <button class="suggest-opt" data-action="suggestForm" data-type="meme">
+          <span class="suggest-opt-icon">🖼️</span>
+          <div><div class="opt-title">Предложить мем</div><div class="opt-sub">Ссылка или описание</div></div>
+        </button>
+        <button class="suggest-opt" data-action="suggestForm" data-type="other">
+          <span class="suggest-opt-icon">✏️</span>
+          <div><div class="opt-title">Другое</div><div class="opt-sub">Любое предложение</div></div>
+        </button>
+      </div>
+    </div>
+    <div id="suggest-step2" hidden>
+      <div class="suggest-label" id="suggest-form-label"></div>
+      <textarea id="suggest-text" placeholder="Напиши здесь..." rows="4"></textarea>
+      <div class="suggest-row">
+        <button class="btn btn-secondary btn-flex" data-action="suggestBack">← Назад</button>
+        <button class="btn btn-green btn-flex" data-action="submitSuggest">📨 Отправить</button>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-wide suggest-cancel" data-action="closeModal" data-modal="modal-suggest">Отмена</button>
+  </div>
+</div>
+
+<!-- ═══ ПРОСМОТР МЕМА ═══ -->
+<div class="lb" id="lb" data-action="closeLbOutside">
+  <button class="lb-x" data-action="closeLb" aria-label="Закрыть">✕</button>
   <div class="lb-inner">
     <img class="lb-img" id="lb-img" alt="">
     <div class="lb-title" id="lb-title"></div>
@@ -619,1142 +363,18 @@ input[type=text]:focus,textarea:focus{box-shadow:0 0 0 3px var(--blue-s)}
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- РЕЖИМ ПРЕДПРОСМОТРА -->
-<button class="pv-open" id="pv-open" onclick="pvBar(true)">ЭКРАНЫ</button>
+<!-- ═══ РЕЖИМ ПРЕДПРОСМОТРА (?preview) ═══ -->
+<button class="pv-open" id="pv-open" data-action="pvBar" data-open="1">ЭКРАНЫ</button>
 <div class="pv-bar" id="pv-bar">
   <div class="pv-top">
     <span class="pv-tag">Предпросмотр</span>
     <span class="pv-hint">данные ненастоящие, в базу ничего не пишется</span>
-    <button class="pv-x" onclick="pvBar(false)">✕</button>
+    <button class="pv-x" data-action="pvBar" data-open="0" aria-label="Скрыть">✕</button>
   </div>
   <div class="pv-scroll" id="pv-scroll"></div>
 </div>
 
-<script>
-// ═══════════════════════════════════════════════════
-//  CONFIGURE
-// ═══════════════════════════════════════════════════
-const CONFIG = {
-  supabase: {
-    url: "https://dcxamyfvfoeoefcrdcqq.supabase.co",
-    anonKey: "sb_publishable_eZ-6aeez3s8OAvHYGt20Bw_XvvyMut_",
-  }
-};
-
-// ═══════════════════════════════════════════════════
-//  SUPABASE
-// ═══════════════════════════════════════════════════
-const SB = {
-  async fetch(path, opts={}) {
-    const r = await fetch(`${CONFIG.supabase.url}/rest/v1/${path}`, {
-      headers: {
-        'apikey': CONFIG.supabase.anonKey,
-        'Authorization': `Bearer ${CONFIG.supabase.anonKey}`,
-        'Content-Type': 'application/json',
-        ...opts.headers
-      },
-      ...opts
-    });
-    if(!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
-    return r.json();
-  },
-  async getSituations() {
-    return this.fetch('situations?select=id,text&active=eq.true&order=id');
-  },
-  async getMemes() {
-    return this.fetch('memes?select=id,title,image_url&active=eq.true&order=id');
-  },
-  imageUrl(path) {
-    return `${CONFIG.supabase.url}/storage/v1/object/public/memes/${path}`;
-  }
-};
-
-// ═══════════════════════════════════════════════════
-//  SUPABASE REALTIME  (комнаты + синхронизация)
-// ═══════════════════════════════════════════════════
-const sb = window.supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey, {
-  realtime: { params: { eventsPerSecond: 10 } }
-});
-
-let roomChannel = null;
-let _pollIv = null;
-let _lastRoomJson = '';
-
-// Создать/перезаписать комнату целиком
-async function writeRoom(data){
-  const { error } = await sb.from('rooms').upsert({ code: S.roomCode, data });
-  if(error){ toast('Ошибка сети: ' + error.message, 3500); throw error; }
-  _lastRoomJson = JSON.stringify(data);
-}
-
-// Точечное изменение — merge делается на сервере под блокировкой строки,
-// поэтому одновременные ходы игроков не затирают друг друга
-async function patchRoom(patch){
-  const { data, error } = await sb.rpc('patch_room', {
-    p_code: S.roomCode,
-    p_paths: flattenPatch(patch)
-  });
-  if(error){ toast('Ошибка сети: ' + error.message, 3500); throw error; }
-  if(data){
-    _lastRoomJson = JSON.stringify(data);
-    S.room = data;
-    handleRoomUpdate(data);
-  }
-}
-
-function applyRoom(d){
-  if(!d) return;
-  const s = JSON.stringify(d);
-  if(s === _lastRoomJson) return;
-  _lastRoomJson = s;
-  S.room = d;
-  handleRoomUpdate(d);
-}
-
-async function fetchRoom(code){
-  const { data } = await sb.from('rooms').select('data').eq('code', code).maybeSingle();
-  return data ? data.data : null;
-}
-
-function subscribeRoom(code){
-  S.roomCode = code;
-  unsubscribeRoom();
-
-  roomChannel = sb
-    .channel('room:' + code)
-    .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'rooms', filter: 'code=eq.' + code },
-        payload => applyRoom(payload.new && payload.new.data))
-    .subscribe();
-
-  // Страховка: если websocket отвалится, игра всё равно продолжится
-  _pollIv = setInterval(async ()=>{
-    if(S.roomCode !== code){ clearInterval(_pollIv); return; }
-    try { applyRoom(await fetchRoom(code)); } catch(e){}
-  }, 3000);
-}
-
-function unsubscribeRoom(){
-  if(roomChannel){ sb.removeChannel(roomChannel); roomChannel = null; }
-  clearInterval(_pollIv);
-}
-
-// Каждое значение пишется целиком, вложенность НЕ разбирается.
-// Причина: jsonb_set создаёт только последний недостающий ключ. Путь
-// players/2/name в комнату без игрока 2 не запишется вообще — родителя нет.
-// Поэтому вложенный путь задаётся явно ключом со слэшем: {'players/2': {...}},
-// и тогда создаётся сам объект игрока, у которого родитель players уже есть.
-function flattenPatch(obj){
-  const out = {};
-  for(const k in obj) out[k] = obj[k];
-  return out;
-}
-
-// ═══════════════════════════════════════════════════
-//  СЕССИЯ: возврат в игру после обновления страницы
-// ═══════════════════════════════════════════════════
-const SESSION_KEY = 'mg_session';
-
-function saveSession(){
-  if(!S.roomCode || S.myIdx < 0) return;
-  try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify({
-      code: S.roomCode, idx: S.myIdx, name: S.myName, host: S.isHost, at: Date.now()
-    }));
-  } catch(e){}
-}
-
-function clearSession(){
-  try { localStorage.removeItem(SESSION_KEY); } catch(e){}
-}
-
-async function restoreSession(){
-  let s = null;
-  try { s = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e){}
-  if(!s || !s.code) return false;
-
-  // Комнаты старше суток удаляются на сервере — держать сессию незачем
-  if(Date.now() - (s.at || 0) > 24*3600*1000){ clearSession(); return false; }
-
-  showScreen('screen-loading');
-
-  let room = null;
-  try { room = await fetchRoom(s.code); } catch(e){}
-  if(!room){ clearSession(); showScreen('screen-welcome'); return false; }
-
-  // Игрока могли выкинуть или комнату пересоздать под тем же кодом
-  if(!(room.players || {})[s.idx]){ clearSession(); showScreen('screen-welcome'); return false; }
-
-  if(!await loadContent()) return false;
-
-  S.myName  = s.name;
-  S.myIdx   = s.idx;
-  S.isHost  = !!s.host;
-  S.roomCode = s.code;
-  S.room    = room;
-  if(room.hands && room.hands[s.idx]) S.myHand = room.hands[s.idx];
-
-  subscribeRoom(s.code);
-  showHamburger();
-  handleRoomUpdate(room);
-  toast(`С возвращением, ${s.name}!`, 2400);
-  return true;
-}
-
-// ═══════════════════════════════════════════════════
-//  GAME STATE
-// ═══════════════════════════════════════════════════
-const S = {
-  myName:'', myIdx:-1, isHost:false, roomCode:'',
-  selectedRounds:5, selectedPlayers:0,
-  room:null,
-  myHand:[],
-  selectedHandIdx:null,
-  _judgeSelected:null,
-  allMemes:[],
-  allSituations:[],
-};
-
-// ═══ ADMIN PIN ═══
-const ADMIN_PIN = '1234';
-let _pin = '';
-
-function showAdminEntry(){ _pin=''; updatePinDots(); document.getElementById('pin-error').textContent=''; showScreen('screen-admin-pin'); }
-function pinPress(d){ if(_pin.length>=4) return; _pin+=d; updatePinDots(); if(_pin.length===4) setTimeout(checkPin,200); }
-function pinBack(){ _pin=_pin.slice(0,-1); updatePinDots(); }
-function pinClear(){ _pin=''; updatePinDots(); }
-function updatePinDots(){
-  for(let i=0;i<4;i++){
-    const el=document.getElementById('pin-d'+i);
-    el.style.background=i<_pin.length?'var(--accent3)':'var(--border)';
-    el.style.transform=i<_pin.length?'scale(1.2)':'scale(1)';
-  }
-}
-function checkPin(){
-  if(_pin===ADMIN_PIN){ showScreen('screen-create'); }
-  else { document.getElementById('pin-error').textContent='Неверный PIN'; _pin=''; updatePinDots(); }
-}
-
-// ═══ AVATARS ═══
-const AVATARS=['🦊','🐼','🦁','🐸','🦋','🐙','🦄','🐻','🦅','🐯'];
-const COLORS=['#C2255C','#E8590C','#1971C2','#2F7D3A','#7048E8','#D6336C','#0C8599','#F08C00','#5C940D','#9C36B5'];
-
-// ═══════════════════════════════════════════════════
-//  UI UTILS
-// ═══════════════════════════════════════════════════
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  const noMenu=['screen-welcome','screen-admin-pin','screen-create','screen-join'];
-  if(noMenu.includes(id)) hideHamburger();
-}
-function openModal(id){document.getElementById(id).classList.add('open')}
-function closeModal(id){document.getElementById(id).classList.remove('open')}
-function toast(msg,dur=2600){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur)}
-function shuffle(a){const arr=[...a];for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr}
-function genCode(){return Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('')}
-function roundsLabel(r){return r===9999?'∞':r}
-
-// После ничьей играются дополнительные раунды — «РАУНД 7/5» выглядел бы странно
-function roundText(room){
-  const r = room.currentRound || 1, total = room.rounds;
-  if(total !== 9999 && r > total) return `ДОП. РАУНД ${r - total}`;
-  return `РАУНД ${r}/${roundsLabel(total)}`;
-}
-
-// ═══════════════════════════════════════════════════
-//  ПРОСМОТР МЕМА В ПОЛНЫЙ РАЗМЕР
-// ═══════════════════════════════════════════════════
-function memeUrl(m){
-  if(!m || !m.image_url) return '';
-  return m.image_url;
-}
-
-// action — необязательная кнопка действия: {label, fn}
-function openMeme(m, action, sub){
-  if(!m) return;
-  document.getElementById('lb-img').src   = memeUrl(m);
-  document.getElementById('lb-title').textContent = m.title || '';
-  document.getElementById('lb-sub').textContent   = sub || '';
-
-  const acts = document.getElementById('lb-acts');
-  acts.innerHTML = action
-    ? `<button class="btn btn-secondary" onclick="closeLb()">Назад</button>
-       <button class="btn btn-green" id="lb-go">${action.label}</button>`
-    : `<button class="btn btn-secondary" onclick="closeLb()">Закрыть</button>`;
-
-  if(action) document.getElementById('lb-go').onclick = ()=>{ closeLb(); action.fn(); };
-  document.getElementById('lb').classList.add('open');
-}
-
-function closeLb(){
-  document.getElementById('lb').classList.remove('open');
-  document.getElementById('lb-img').src = '';
-}
-
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLb(); });
-
-function memeImg(m,h=90){
-  if(!m) return '';
-  const url = m.image_url.startsWith('http') ? m.image_url : SB.imageUrl(m.image_url);
-  return `<img src="${url}" alt="${m.title}" style="height:${h}px;width:100%;object-fit:cover;display:block" onerror="this.style.background='#EEF0F7';this.style.height='${h}px'">`;
-}
-
-// ═══════════════════════════════════════════════════
-//  SETUP FORM
-// ═══════════════════════════════════════════════════
-function selectPlayers(n,btn){
-  S.selectedPlayers=n;
-  document.querySelectorAll('.players-grid .num-btn').forEach(b=>b.classList.remove('selected'));
-  btn.classList.add('selected');
-}
-function selectRounds(n,btn){
-  S.selectedRounds=n;
-  document.querySelectorAll('.rounds-grid .num-btn').forEach(b=>b.classList.remove('selected'));
-  btn.classList.add('selected');
-}
-window.onload = ()=>{
-  selectRounds(5,document.querySelector('.rounds-grid .num-btn'));
-  scaleTagline();
-  if(location.search.includes('preview')){ pvStart(); return; }
-  restoreSession();
-};
-
-// ═══════════════════════════════════════════════════
-//  РЕЖИМ ПРЕДПРОСМОТРА  (?preview в адресе)
-//  Показывает любой экран с готовыми данными.
-//  Ничего не пишет в базу — все сетевые вызовы отключены.
-// ═══════════════════════════════════════════════════
-let PREVIEW = false;
-
-const PV_SCREENS = [
-  ['Главная',        'screen-welcome'],
-  ['Создание',       'screen-create'],
-  ['Вход',           'screen-join'],
-  ['Лобби (хост)',   'lobby-host'],
-  ['Лобби (гость)',  'lobby-guest'],
-  ['Загрузка',       'screen-loading'],
-  ['Читающий',       'screen-reader'],
-  ['Ждём ситуацию',  'screen-waiting-sit'],
-  ['Выбор мема',     'screen-pick'],
-  ['Мем отправлен',  'screen-waiting-others'],
-  ['Читающий ждёт',  'screen-reader-wait'],
-  ['Карты рубашкой', 'judge-down'],
-  ['Карты открыты',  'judge-up'],
-  ['Ждём судью',     'screen-waiting-judge'],
-  ['Итог раунда',    'screen-result'],
-  ['Финал',          'screen-end'],
-];
-
-function pvMeme(i){
-  const colors = ['1a1a20','2a0e5a','071c2a','3a1a0a','0d220d','2a1a3a'];
-  const c = colors[i % colors.length];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
-    <rect width="300" height="200" fill="#${c}"/>
-    <text x="150" y="105" font-family="sans-serif" font-size="56" fill="#ffffff55"
-      text-anchor="middle">мем ${i+1}</text></svg>`;
-  return {
-    id: 900 + i,
-    title: ['Кот в шоке','Ну такое','Батя одобряет','Это фиаско','Сойдёт','Момент истины'][i % 6],
-    image_url: 'data:image/svg+xml;utf8,' + encodeURIComponent(svg)
-  };
-}
-
-function pvRoom(){
-  const names = ['Агшин','Рустам','Лейла','Камиль','Нигяр'];
-  const players = {};
-  names.forEach((n,i)=> players[i] = { name:n, score:[3,1,2,0,1][i], idx:i });
-  return {
-    code:'DEMO', hostName:names[0], rounds:15, maxPlayers:5,
-    phase:'picking', playerCount:names.length,
-    currentRound:4, readerIdx:2,
-    situation:'Когда наступил на лего',
-    readerSits:['Когда наступил на лего','Когда зашёл в туалет после бати'],
-    submissions:{ 0:pvMeme(0), 1:pvMeme(1), 4:pvMeme(4) },
-    deck:[5,6,7,8,9,10,11].map(pvMeme), discard:[pvMeme(0)],
-    tableCards:[
-      {playerIdx:0, ...pvMeme(0)},
-      {playerIdx:1, ...pvMeme(1)},
-      {playerIdx:4, ...pvMeme(4)}
-    ],
-    winnerIdx:1,
-    players, usedSituations:[]
-  };
-}
-
-function pvStart(){
-  PREVIEW = true;
-
-  // Глушим всё, что ходит в сеть
-  writeRoom      = async ()=>{};
-  patchRoom      = async ()=>{};
-  playCard       = async ()=>{};
-  saveSession    = ()=>{};
-  subscribeRoom  = ()=>{};
-  loadContent    = async ()=>{ S.allMemes = [0,1,2,3,4,5].map(pvMeme);
-                               S.allSituations = ['Ситуация раз','Ситуация два']; return true; };
-  handleRoomUpdate = ()=>{};
-
-  S.myName = 'Агшин';
-  S.myIdx  = 0;
-  S.isHost = true;
-  S.roomCode = 'DEMO';
-  S.room = pvRoom();
-  S.myHand = [0,1,2,3,4].map(pvMeme);
-  S.allMemes = [0,1,2,3,4,5].map(pvMeme);
-  S.allSituations = ['Ситуация раз','Ситуация два'];
-
-  document.getElementById('pv-scroll').innerHTML = PV_SCREENS
-    .map(([label,key],i)=>`<button class="pv-btn" id="pv-b${i}" onclick="pvShow(${i})">${label}</button>`)
-    .join('');
-
-  pvBar(true);
-  pvShow(0);
-  toast('Режим предпросмотра', 2200);
-}
-
-function pvBar(open){
-  document.getElementById('pv-bar').classList.toggle('on', open);
-  document.getElementById('pv-open').classList.toggle('on', !open);
-  document.body.style.paddingBottom = open ? '104px' : '';
-}
-
-function pvShow(i){
-  if(!PREVIEW) return;
-  const [, key] = PV_SCREENS[i];
-  const room = pvRoom();
-  S.room = room;
-
-  document.querySelectorAll('.pv-btn').forEach((b,n)=>b.classList.toggle('act', n===i));
-
-  // Экраны, где роль игрока важна
-  if(key === 'lobby-host'){ S.isHost = true;  S.myIdx = 0; showLobby(room); }
-  else if(key === 'lobby-guest'){ S.isHost = false; S.myIdx = 3; showLobby(room); }
-  else if(key === 'screen-reader'){      S.myIdx = room.readerIdx; showReaderScreen(room); }
-  else if(key === 'screen-reader-wait'){ S.myIdx = room.readerIdx; showReaderWait(room); }
-  else if(key === 'judge-down'){         S.myIdx = room.readerIdx; showJudgeScreen(room,false); }
-  else if(key === 'judge-up'){           S.myIdx = room.readerIdx; showJudgeScreen(room,true); }
-  else if(key === 'screen-pick'){            S.myIdx = 0; S.myHand = [0,1,2,3,4].map(pvMeme); showPickScreen(room); }
-  else if(key === 'screen-waiting-others'){  S.myIdx = 0; showWaitingOthers(room); }
-  else if(key === 'screen-waiting-sit'){     S.myIdx = 0; showWaitingSit(room); }
-  else if(key === 'screen-waiting-judge'){   S.myIdx = 0; showWaitingJudge(room); }
-  else if(key === 'screen-result'){          S.myIdx = 0; S.isHost = true; showResultScreen(room); }
-  else if(key === 'screen-end'){             S.myIdx = 0; showEndScreen(room); }
-  else showScreen(key);
-
-  if(['screen-welcome','screen-create','screen-join'].includes(key)) hideHamburger();
-  window.scrollTo(0,0);
-}
-function scaleTagline(){
-  const logo=document.getElementById('main-logo');
-  const tagline=document.getElementById('tagline');
-  if(!logo||!tagline) return;
-  tagline.style.fontSize='1rem';
-  const logoW=logo.getBoundingClientRect().width;
-  const tagW=tagline.getBoundingClientRect().width;
-  const scale=logoW/tagW;
-  tagline.style.fontSize=scale+'rem';
-}
-window.addEventListener('resize',scaleTagline);
-
-// ═══════════════════════════════════════════════════
-//  LOAD CONTENT FROM SUPABASE
-// ═══════════════════════════════════════════════════
-async function loadContent() {
-  // В этой сессии уже загружено — базу не дёргаем
-  if(S.allMemes.length && S.allSituations.length) return true;
-
-  showScreen('screen-loading');
-  try {
-    const [memes, situations] = await Promise.all([SB.getMemes(), SB.getSituations()]);
-    if(!memes.length)      throw new Error('Нет мемов в базе данных');
-    if(situations.length < 2) throw new Error('Нужно минимум 2 ситуации');
-
-    S.allMemes = memes;
-    S.allSituations = situations.map(s => s.text).filter(Boolean);
-
-    // Кэш на случай обрыва связи или спящей базы
-    try {
-      localStorage.setItem('mg_content',
-        JSON.stringify({ memes: S.allMemes, situations: S.allSituations }));
-    } catch(_){}
-    return true;
-
-  } catch(e) {
-    // Поднимаем последний успешный кэш
-    try {
-      const c = JSON.parse(localStorage.getItem('mg_content'));
-      if(c && c.memes && c.memes.length && c.situations && c.situations.length >= 2){
-        S.allMemes = c.memes;
-        S.allSituations = c.situations;
-        toast('Нет связи с базой — играем на сохранённом контенте', 3500);
-        return true;
-      }
-    } catch(_){}
-
-    toast(`Ошибка загрузки: ${e.message}`, 4000);
-    showScreen('screen-welcome');
-    return false;
-  }
-}
-
-// ═══════════════════════════════════════════════════
-//  CREATE ROOM
-// ═══════════════════════════════════════════════════
-async function createRoom() {
-  const name = document.getElementById('host-name').value.trim();
-  if(!name){ toast('Введи своё имя!'); return; }
-  if(!S.selectedPlayers){ toast('Выбери число игроков!'); return; }
-  if(!S.selectedRounds){ toast('Выбери число раундов!'); return; }
-
-  const ok = await loadContent();
-  if(!ok) return;
-
-  S.myName=name; S.isHost=true; S.myIdx=0;
-  const code = genCode(); S.roomCode=code;
-
-  const roomData = {
-    code, hostName:name, rounds:S.selectedRounds, maxPlayers:S.selectedPlayers,
-    phase:'lobby',
-    players:{ 0:{ name, score:0, idx:0 } },
-    playerCount:1,
-    currentRound:1, readerIdx:0,
-    situation:'', submissions:{}, tableCards:[], winnerIdx:-1,
-    readerSits:[], usedSituations:[],
-  };
-
-  await writeRoom(roomData);
-  subscribeRoom(code);
-  saveSession();
-  showLobby(roomData);
-}
-
-// ═══════════════════════════════════════════════════
-//  JOIN ROOM
-// ═══════════════════════════════════════════════════
-async function joinRoom() {
-  const name=document.getElementById('join-name').value.trim();
-  const code=document.getElementById('join-code').value.trim().toUpperCase();
-  if(!name){ toast('Введи своё имя!'); return; }
-  if(code.length!==4){ toast('Введи 4-буквенный код!'); return; }
-  S.myName=name; S.isHost=false; S.roomCode=code;
-
-  const existing = await fetchRoom(code);
-  if(!existing){ toast('Комната не найдена 😕',3000); return; }
-  if(existing.phase!=='lobby'){ toast('Игра уже идёт!',3000); return; }
-  const maxP=existing.maxPlayers||10;
-  if((existing.playerCount||0)>=maxP){ toast(`Комната заполнена (${maxP}/${maxP})`,3000); return; }
-
-  const ok = await loadContent();
-  if(!ok) return;
-
-  const usedIdxs=Object.values(existing.players||{}).map(p=>p.idx);
-  let newIdx=0; while(usedIdxs.includes(newIdx)) newIdx++;
-  S.myIdx=newIdx;
-
-  S.roomCode = code;
-  await patchRoom({
-    [`players/${newIdx}`]: { name, score:0, idx:newIdx },
-    playerCount: (existing.playerCount||0) + 1
-  });
-
-  subscribeRoom(code);
-  saveSession();
-  showLobby(S.room || existing);
-}
-
-// ═══════════════════════════════════════════════════
-//  LOBBY
-// ═══════════════════════════════════════════════════
-function showLobby(room){
-  document.getElementById('lobby-code').textContent=room.code;
-  document.getElementById('lobby-rounds-label').textContent=`Игроков: ${room.maxPlayers||'?'} · Раундов: ${roundsLabel(room.rounds)}`;
-  document.getElementById('lobby-role-label').textContent=S.isHost?'ВЫ — ХОСТ':'ВЫ — УЧАСТНИК';
-  document.getElementById('lobby-host-controls').style.display=S.isHost?'block':'none';
-  document.getElementById('lobby-guest-wait').style.display=S.isHost?'none':'block';
-  renderLobbySlots(room);
-  showHamburger();
-  showScreen('screen-lobby');
-}
-function renderLobbySlots(room){
-  const max=room.maxPlayers||10;
-  const players=Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx);
-  const filled=players.map(p=>`
-    <div class="player-slot ${p.idx===S.myIdx?'me':''}">
-      <div class="slot-avatar" style="background:${COLORS[p.idx]}18;color:${COLORS[p.idx]}">${AVATARS[p.idx]}</div>
-      <div class="slot-name">${p.name} <span style="color:var(--muted);font-size:.72rem;font-weight:400">(${p.score||0} очк.)</span></div>
-      ${p.idx===0?'<span class="slot-badge badge-host">Хост</span>':''}
-      ${p.idx===S.myIdx?'<span class="slot-badge badge-you">Ты</span>':''}
-    </div>`).join('');
-  const empty=Array.from({length:Math.max(0,max-players.length)},(_,i)=>`
-    <div class="player-slot" style="opacity:.35;border-style:dashed">
-      <div class="slot-avatar" style="background:var(--border);color:var(--muted)">${players.length+i+1}</div>
-      <div class="slot-name" style="color:var(--muted);font-weight:400">Ожидание...</div>
-    </div>`).join('');
-  document.getElementById('lobby-slots').innerHTML=filled+empty;
-  if(S.isHost){
-    const n=players.length, btn=document.getElementById('lobby-start-btn');
-    const allReady=n>=max;
-    btn.disabled=n<3;
-    document.getElementById('lobby-player-hint').textContent=
-      allReady ? `Все ${max} игроков в комнате — начинаем!` :
-      n<3 ? `Ждём игроков... (${n}/${max})` :
-      `${n} из ${max} игроков — можно начинать!`;
-  }
-}
-function copyCode(){ navigator.clipboard.writeText(S.roomCode).then(()=>toast('Код скопирован! 📋')).catch(()=>toast(S.roomCode)); }
-
-function shareRoom(){
-  const url = window.location.href.split('?')[0];
-  const text = `Присоединяйся к игре Memology!\nКод комнаты: ${S.roomCode}\nОткрой: ${url}`;
-  if(navigator.share){
-    navigator.share({ title:'Memology', text, url })
-      .catch(()=>{ navigator.clipboard.writeText(text); toast('Ссылка скопирована!'); });
-  } else {
-    navigator.clipboard.writeText(text).then(()=>toast('Приглашение скопировано! 📋')).catch(()=>toast(text));
-  }
-}
-
-// ═══════════════════════════════════════════════════
-//  START GAME (host)
-// ═══════════════════════════════════════════════════
-async function startGame() {
-  const room=S.room;
-  const players=Object.values(room.players).sort((a,b)=>a.idx-b.idx);
-  // Одна колода на всю игру: каждый мем существует в единственном экземпляре
-  const need = players.length * 5;
-  if(S.allMemes.length < need){
-    toast(`Нужно минимум ${need} мемов на ${players.length} игроков, в базе ${S.allMemes.length}`, 5000);
-    return;
-  }
-  const deck = shuffle([...S.allMemes]);
-  const hands = {};
-  players.forEach(p => { hands[p.idx] = deck.splice(0, 5); });
-  const sitPool=shuffle([...S.allSituations]);
-  const sits=[sitPool[0], sitPool[1]||sitPool[0]];
-  await patchRoom({ phase:'reader', currentRound:1, readerIdx:0, hands, deck, discard:[],
-                    situation:'', submissions:{}, tableCards:[], winnerIdx:-1,
-                    readerSits:sits, usedSituations:sits });
-}
-
-// ═══════════════════════════════════════════════════
-//  REALTIME DISPATCH
-// ═══════════════════════════════════════════════════
-function handleRoomUpdate(room){
-  if(!room) return;
-  if(room.hands?.[S.myIdx]) S.myHand=room.hands[S.myIdx];
-  const phase=room.phase, isReader=S.myIdx===room.readerIdx;
-  const cur=document.querySelector('.screen.active')?.id;
-
-  // screen-loading важен: вход в комнату идёт именно с него,
-  // и без него лобби оставалось с заглушкой «????»
-  if(phase==='lobby'){
-    if(cur==='screen-lobby'||cur==='screen-welcome'||cur==='screen-loading') showLobby(room);
-    return;
-  }
-  if(phase==='reader'){
-    if(isReader && cur!=='screen-reader') showReaderScreen(room);
-    else if(!isReader && cur!=='screen-waiting-sit') showWaitingSit(room);
-  }
-  else if(phase==='picking'){
-    // Переход к голосованию запускает хост — независимо от того, на каком он
-    // экране. Со 2-го раунда читающим становится другой игрок, и раньше
-    // проверка не вызывалась вообще: партия зависала на «ждём остальных».
-    if(S.isHost) checkAllSubmitted(room);
-
-    const mySub=room.submissions?.[S.myIdx];
-    if(!isReader){
-      if(!mySub && cur!=='screen-pick') showPickScreen(room);
-      else if(mySub) { if(cur!=='screen-waiting-others') showWaitingOthers(room); else renderWaitStatus(room); }
-    } else {
-      if(cur!=='screen-reader-wait') showReaderWait(room); else renderReaderWaitStatus(room);
-    }
-  }
-  else if(phase==='judging'){
-    if(isReader && cur!=='screen-judge') showJudgeScreen(room,false);
-    else if(!isReader && cur!=='screen-waiting-judge') showWaitingJudge(room);
-  }
-  else if(phase==='result'){ if(cur!=='screen-result') showResultScreen(room); }
-  else if(phase==='end'){ if(cur!=='screen-end') showEndScreen(room); }
-
-  if(cur==='screen-waiting-others') renderWaitStatus(room);
-  if(cur==='screen-reader-wait'){ renderReaderWaitStatus(room); if(S.isHost) checkAllSubmitted(room); }
-}
-
-// ═══════════════════════════════════════════════════
-//  READER
-// ═══════════════════════════════════════════════════
-function showReaderScreen(room){
-  document.getElementById('reader-round-badge').textContent=roundText(room);
-  const sits=room.readerSits||['',''];
-  _flipped = false;
-  const card = document.getElementById('dual-card');
-  card.classList.remove('flipped');
-  card.innerHTML=`
-    <div class="sit-half top" id="sh-top" onclick="readerTap(0)">
-      <div class="sit-label">Ситуация А</div>
-      <div class="sit-text">${sits[0]}</div>
-      <div class="sit-tap" id="tap-a">нажми чтобы выбрать</div>
-    </div>
-    <div class="sit-divider"></div>
-    <div class="sit-half bottom" id="sh-bot" onclick="readerTap(1)">
-      <div class="sit-tap" id="tap-b">нажми чтобы развернуть</div>
-      <div class="sit-text">${sits[1]}</div>
-      <div class="sit-label">Ситуация Б</div>
-    </div>`;
-  showScreen('screen-reader');
-}
-// Перевёрнутую половину сначала нужно развернуть, и только потом выбрать.
-// Так исключаются случайные тычки в нечитаемый текст.
-let _flipped = false;
-
-function readerTap(idx){
-  const card = document.getElementById('dual-card');
-  const upsideDown = (idx === 1 && !_flipped) || (idx === 0 && _flipped);
-
-  if(upsideDown){
-    _flipped = !_flipped;
-    card.classList.toggle('flipped', _flipped);
-    document.getElementById('tap-a').textContent = _flipped ? 'нажми чтобы развернуть' : 'нажми чтобы выбрать';
-    document.getElementById('tap-b').textContent = _flipped ? 'нажми чтобы выбрать'   : 'нажми чтобы развернуть';
-    document.getElementById('reader-hint').textContent = '💡 Нажми ещё раз, чтобы выбрать эту ситуацию';
-    return;
-  }
-  readerChoose(idx);
-}
-
-async function readerChoose(idx){
-  const top=document.getElementById('sh-top'),bot=document.getElementById('sh-bot');
-  if(!top||!bot) return;
-  (idx===0?bot:top).classList.add('not-chosen');
-  (idx===0?top:bot).style.pointerEvents='none';
-  const sit=S.room.readerSits[idx];
-  await patchRoom({ phase:'picking', situation:sit, submissions:{} });
-  setTimeout(()=>showReaderWait(S.room),700);
-}
-
-// ═══════════════════════════════════════════════════
-//  WAITING SIT
-// ═══════════════════════════════════════════════════
-function showWaitingSit(room){
-  document.getElementById('waiting-sit-text').textContent=`${room.players?.[room.readerIdx]?.name||'Читающий'} выбирает ситуацию...`;
-  showScreen('screen-waiting-sit');
-}
-
-// ═══════════════════════════════════════════════════
-//  PICK SCREEN
-// ═══════════════════════════════════════════════════
-function showPickScreen(room){
-  document.getElementById('pick-round-badge').textContent=roundText(room);
-  document.getElementById('pick-sit-text').textContent=room.situation;
-  S.selectedHandIdx=null;
-  document.getElementById('submit-btn').disabled=true;
-  document.getElementById('pick-hand').innerHTML=(S.myHand||[]).map((m,i)=>`
-    <div class="hand-card" onclick="openHandCard(${i})" id="hc-${i}">
-      ${memeImg(m,78)}
-      <div class="hand-card-title">${m.title}</div>
-    </div>`).join('');
-  const left = (room.deck || []).length;
-  const badge = document.getElementById('deck-badge');
-  badge.textContent = '🂠 ' + left;
-  badge.style.color = left <= 5 ? 'var(--accent)' : '';
-  renderPokerTable('poker-table', room, 'pick');
-  showScreen('screen-pick');
-}
-// Мем сначала открывается целиком — выбрать вслепую по мелкой превьюшке нельзя
-function openHandCard(i){
-  const m = S.myHand[i];
-  if(!m) return;
-  openMeme(m, { label:'✅ Выбрать этот мем', fn:()=>selectCard(i) },
-           'Выбери — потом нажми «Отправить мем»');
-}
-
-function selectCard(i){
-  S.selectedHandIdx=i;
-  document.querySelectorAll('.hand-card').forEach((c,idx)=>c.classList.toggle('selected-hand',idx===i));
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = false;
-  btn.scrollIntoView({ behavior:'smooth', block:'nearest' });
-}
-// Розыгрыш карты целиком на сервере, под блокировкой строки:
-// карта уходит из руки на стол, из колоды приходит замена ровно на её место.
-// Атомарность важна — иначе двое могут вытянуть одну и ту же верхнюю карту.
-async function playCard(index){
-  const { data, error } = await sb.rpc('play_card', {
-    p_code:   S.roomCode,
-    p_player: String(S.myIdx),
-    p_index:  index
-  });
-  if(error){ toast('Ошибка сети: ' + error.message, 3500); throw error; }
-  if(data){
-    _lastRoomJson = JSON.stringify(data);
-    S.room = data;
-    handleRoomUpdate(data);
-  }
-  return data;
-}
-
-async function submitMeme(){
-  const i = S.selectedHandIdx;
-  if(i == null || !S.myHand[i]) return;
-
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  try { await playCard(i); }
-  catch(e){ btn.disabled = false; return; }
-
-  showWaitingOthers(S.room);
-}
-
-// ═══ HAMBURGER MENU ═══
-function showHamburger(){
-  document.getElementById('hamburger-btn').classList.add('visible');
-  if(S.roomCode) document.getElementById('menu-room-info').textContent=`Комната: ${S.roomCode}`;
-}
-function hideHamburger(){ document.getElementById('hamburger-btn').classList.remove('visible'); closeMenu(); }
-function toggleMenu(){
-  document.getElementById('side-menu').classList.toggle('open');
-  document.getElementById('menu-overlay').classList.toggle('open');
-}
-function closeMenu(){
-  document.getElementById('side-menu').classList.remove('open');
-  document.getElementById('menu-overlay').classList.remove('open');
-}
-function openSuggest(){
-  closeMenu();
-  document.getElementById('suggest-step1').style.display='';
-  document.getElementById('suggest-step2').style.display='none';
-  document.getElementById('suggest-text').value='';
-  openModal('modal-suggest');
-}
-let _suggestType='';
-function openSuggestForm(type){
-  _suggestType=type;
-  const labels={situation:'📋 Предложить ситуацию',meme:'🖼️ Предложить мем',other:'✏️ Другое'};
-  const placeholders={situation:'Опиши ситуацию для карточки...',meme:'Ссылка на мем или описание...',other:'Напиши своё предложение...'};
-  document.getElementById('suggest-form-label').textContent=labels[type];
-  document.getElementById('suggest-text').placeholder=placeholders[type];
-  document.getElementById('suggest-step1').style.display='none';
-  document.getElementById('suggest-step2').style.display='';
-}
-function backSuggest(){ document.getElementById('suggest-step1').style.display=''; document.getElementById('suggest-step2').style.display='none'; }
-async function submitSuggest(){
-  const text=document.getElementById('suggest-text').value.trim();
-  if(!text){ toast('Напиши что-нибудь!'); return; }
-  try {
-    await fetch(`${CONFIG.supabase.url}/rest/v1/suggestions`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':CONFIG.supabase.anonKey,'Authorization':`Bearer ${CONFIG.supabase.anonKey}`},
-      body:JSON.stringify({type:_suggestType,text,player:S.myName,room:S.roomCode})
-    });
-  } catch(e){}
-  closeModal('modal-suggest');
-  toast('Предложение отправлено! 💡');
-}
-function leaveGame(){
-  if(!confirm('Выйти из игры?')) return;
-  closeMenu();
-  unsubscribeRoom();
-  clearSession();
-  _lastRoomJson='';
-  S.roomCode=''; S.myIdx=-1; S.isHost=false; S.myHand=[];
-  hideHamburger();
-  showScreen('screen-welcome');
-  toast('Вы вышли из игры');
-}
-
-// ═══════════════════════════════════════════════════
-//  POKER TABLE RENDERER
-// ═══════════════════════════════════════════════════
-function renderPokerTable(containerId, room, phase){
-  const el = document.getElementById(containerId);
-  if(!el || !room) return;
-  const players = Object.values(room.players||{}).sort((a,b)=>a.idx-b.idx);
-  const subs = room.submissions||{};
-  const n = players.length;
-  if(!n) return;
-  const cx = 50, cy = 50, rx = 44, ry = 40;
-
-  el.innerHTML = '<div class="poker-logo">MEMOLOGY</div>' + players.map((p, i) => {
-    const angle = (2 * Math.PI * i / n) - Math.PI/2;
-    const ca = Math.cos(angle), sa = Math.sin(angle);
-    // Проекция на границу прямоугольника: у эллипса углы стола пустовали
-    const m = Math.max(Math.abs(ca), Math.abs(sa)) || 1;
-    const x = cx + rx * ca / m;
-    const y = cy + ry * sa / m;
-    const isMe = p.idx === S.myIdx;
-    const isReader = p.idx === room.readerIdx;
-    const hasDone = subs[p.idx] !== undefined;
-    const avatar = AVATARS[p.idx % AVATARS.length];
-    const pts = p.score || 0;
-
-    let avatarClass = 'seat-avatar';
-    let statusText = '', statusClass = '';
-    if(isReader){
-      avatarClass += ' reader-seat';
-      statusText = '🎤 Читает';
-      statusClass = 'reader-lbl';
-    } else if(hasDone){
-      avatarClass += ' done';
-      statusText = '✅ Выбрал';
-      statusClass = 'done';
-    } else {
-      avatarClass += ' thinking';
-      statusText = '⏳ Думает';
-      statusClass = 'thinking';
-    }
-    if(isMe) avatarClass += ' me';
-
-    return `<div class="poker-seat" style="left:${x}%;top:${y}%">
-      <div class="${avatarClass}">${avatar}</div>
-      <div class="seat-name">${p.name} <span style="opacity:.6">(${pts})</span></div>
-      <div class="seat-status ${statusClass}">${statusText}</div>
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════
-//  WAITING SCREENS
-// ═══════════════════════════════════════════════════
-function showWaitingOthers(room){
-  if(!room) return;
-  document.getElementById('waiting-round-badge').textContent=roundText(room);
-  document.getElementById('waiting-sit-text2').textContent=room.situation||'—';
-  renderPokerTable('poker-table-waiting', room, 'waiting');
-  showScreen('screen-waiting-others');
-}
-function renderWaitStatus(room){
-  if(!room) return;
-  renderPokerTable('poker-table-waiting', room, 'waiting');
-}
-function showReaderWait(room){
-  document.getElementById('reader-wait-sit').textContent=room.situation||'—';
-  renderPokerTable('poker-table-reader', room, 'reader');
-  showScreen('screen-reader-wait');
-  if(S.isHost) checkAllSubmitted(room);
-}
-function renderReaderWaitStatus(room){
-  if(!room) return;
-  renderPokerTable('poker-table-reader', room, 'reader');
-}
-let _switching = false;
-
-async function checkAllSubmitted(room){
-  if(!room || !S.isHost) return;
-  if(room.phase !== 'picking') return;     // уже перешли
-  if(_switching) return;                   // перевод уже в пути
-
-  const players = Object.values(room.players||{}).filter(p => p.idx !== room.readerIdx);
-  if(!players.length) return;
-  const subs = room.submissions || {};
-  if(!players.every(p => subs[p.idx])) return;
-
-  _switching = true;
-  try {
-    const tableCards = shuffle(players.map(p => ({ playerIdx:p.idx, ...subs[p.idx] })));
-    await patchRoom({ phase:'judging', tableCards });
-  } finally {
-    _switching = false;
-  }
-}
-function showWaitingJudge(room){
-  document.getElementById('waiting-judge-text').textContent=`${room.players?.[room.readerIdx]?.name||'Читающий'} выбирает лучший мем...`;
-  showScreen('screen-waiting-judge');
-}
-
-// ═══════════════════════════════════════════════════
-//  JUDGE
-// ═══════════════════════════════════════════════════
-function showJudgeScreen(room,revealed){
-  document.getElementById('judge-round-badge').textContent=roundText(room);
-  document.getElementById('judge-sit-text').textContent=room.situation;
-  const cards=room.tableCards||[], btn=document.getElementById('judge-confirm-btn');
-  S._judgeSelected=null;
-  if(!revealed){
-    document.getElementById('judge-instruction').textContent='🔀 Мемы перемешаны анонимно — нажми чтобы раскрыть!';
-    document.getElementById('judge-table').innerHTML=cards.map((_,i)=>`
-      <div class="table-card face-down" onclick="revealCards()"><div class="tc-inner"></div></div>`).join('');
-    btn.style.display='none';
-  } else {
-    document.getElementById('judge-instruction').textContent='👇 Нажми на мем, чтобы рассмотреть его целиком';
-    document.getElementById('judge-table').innerHTML=cards.map((tc,i)=>`
-      <div class="table-card face-up flip-in" id="jc-${i}" onclick="openTableCard(${i})" style="animation-delay:${i*.07}s">
-        <div class="tc-inner">${memeImg(tc,90)}<div class="tc-title">${tc.title}</div></div>
-      </div>`).join('');
-    btn.style.display='inline-flex'; btn.disabled=true;
-  }
-  showScreen('screen-judge');
-}
-function revealCards(){ showJudgeScreen(S.room,true); }
-function openTableCard(i){
-  const tc = (S.room.tableCards||[])[i];
-  if(!tc) return;
-  openMeme(tc, { label:'🏆 Выбрать этот мем', fn:()=>judgeSelect(i) },
-           'Автор пока скрыт');
-}
-
-function judgeSelect(i){
-  S._judgeSelected=i;
-  document.querySelectorAll('.table-card.face-up').forEach((el,idx)=>el.classList.toggle('winning',idx===i));
-  const btn = document.getElementById('judge-confirm-btn');
-  btn.disabled = false;
-  btn.scrollIntoView({ behavior:'smooth', block:'nearest' });
-}
-async function judgeConfirm(){
-  if(S._judgeSelected==null) return;
-  const card = S.room.tableCards[S._judgeSelected];
-  const winnerIdx = card.playerIdx;
-
-  // Начисляем очко и сразу считаем, чем закончится партия
-  const playerPatch = {};
-  const scores = [];
-  Object.values(S.room.players).forEach(p => {
-    const sc = (p.score||0) + (p.idx === winnerIdx ? 1 : 0);
-    playerPatch[`players/${p.idx}/score`] = sc;
-    scores.push(sc);
-  });
-
-  const top      = Math.max(...scores);
-  const leaders  = scores.filter(v => v === top).length;
-  const lastRound = S.room.currentRound >= S.room.rounds;
-  const tie      = leaders > 1;
-
-  // Победитель должен быть один: при равенстве играем дополнительный раунд
-  await patchRoom({
-    ...playerPatch,
-    winnerIdx,
-    tiebreak: lastRound && tie,
-    phase: (lastRound && !tie) ? 'end' : 'result'
-  });
-}
-
-// ═══════════════════════════════════════════════════
-//  RESULT
-// ═══════════════════════════════════════════════════
-function showResultScreen(room){
-  const winner=room.players?.[room.winnerIdx], cards=room.tableCards||[];
-  const winCard=cards.find(c=>c.playerIdx===room.winnerIdx);
-  document.getElementById('result-winner-area').innerHTML=winner&&winCard?`
-    <div style="background:linear-gradient(135deg,rgba(255,204,0,.12),rgba(255,100,0,.08));border:2px solid rgba(255,204,0,.3);border-radius:16px;padding:20px;box-shadow:0 0 32px rgba(255,204,0,.18);max-width:360px;margin:0 auto">
-      <div style="font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:7px;font-weight:700">🏆 Победитель раунда</div>
-      <div style="font-family:'Pangolin',cursive;font-size:1.3rem;font-weight:900;margin-bottom:10px">${winner.name}</div>
-      <div style="border-radius:10px;overflow:hidden;max-height:100px;cursor:pointer"
-           onclick="openMeme(S.room.tableCards.find(c=>c.playerIdx===S.room.winnerIdx),null,'Победитель раунда 🏆')">${memeImg(winCard,100)}</div>
-      <div style="color:var(--muted);font-size:.82rem;margin-top:8px">«${winCard.title}»</div>
-    </div>`:
-    `<div style="color:var(--muted);padding:14px">Ничья 😅</div>`;
-
-  document.getElementById('result-all-cards').innerHTML=cards.map((tc,i)=>{
-    const p=room.players?.[tc.playerIdx],isWin=tc.playerIdx===room.winnerIdx;
-    return `<div class="table-card face-up ${isWin?'winning':''}" onclick="openResultCard(${i})">
-      <div class="tc-inner">${memeImg(tc,90)}
-      <div class="tc-title">${tc.title}</div>
-      <div class="tc-owner">${p?.name||'?'}${isWin?' 🏆':''}</div></div></div>`;
-  }).join('');
-
-  // Партия должна была закончиться, но на вершине несколько игроков
-  const tie = document.getElementById('tiebreak-note');
-  if(room.tiebreak){
-    const top = Math.max(...Object.values(room.players||{}).map(p => p.score||0));
-    const names = Object.values(room.players||{}).filter(p => (p.score||0) === top).map(p => p.name);
-    tie.style.display = 'block';
-    tie.innerHTML = `⚔️ <strong>Ничья!</strong> ${names.join(' и ')} — по ${top}.<br>Играем дополнительный раунд до первого перевеса.`;
-  } else {
-    tie.style.display = 'none';
-  }
-
-  const btn=document.getElementById('next-round-btn');
-  const hint=document.getElementById('host-only-hint');
-  if(S.isHost){
-    btn.style.display='inline-flex'; btn.style.opacity='1'; hint.style.display='none';
-    btn.onclick=nextRound;
-  } else {
-    btn.style.display='none'; hint.style.display='block';
-  }
-  showScreen('screen-result');
-}
-function openResultCard(i){
-  const room = S.room, tc = (room.tableCards||[])[i];
-  if(!tc) return;
-  const p = room.players && room.players[tc.playerIdx];
-  const who = p ? p.name : '?';
-  openMeme(tc, null, tc.playerIdx === room.winnerIdx ? `${who} — победитель раунда 🏆` : who);
-}
-
-async function nextRound(){
-  const room=S.room;
-  const nextRoundNum=(room.currentRound||1)+1;
-  const nextReaderIdx=((room.readerIdx||0)+1)%Object.keys(room.players).length;
-
-  // Руки не трогаем вообще: карта заменяется сервером в момент отправки.
-  // Если колода кончилась и кому-то нечем ходить — игра завершается.
-  const players=Object.values(room.players).sort((a,b)=>a.idx-b.idx);
-  const noCards = players.some(p =>
-    p.idx !== nextReaderIdx && !((room.hands && room.hands[p.idx]) || []).length);
-  if(noCards){
-    toast('Мемы закончились — игра окончена!', 4000);
-    await patchRoom({ phase:'end' });
-    return;
-  }
-  // Флаг ничьей снимаем — иначе он останется висеть в следующем итоге
-  const used=room.usedSituations||[];
-  const avail=S.allSituations.filter(s=>!used.includes(s));
-  const sitPool=shuffle(avail.length>=2?avail:[...S.allSituations]);
-  const sits=[sitPool[0],sitPool[1]||sitPool[0]];
-  await patchRoom({ phase:'reader', currentRound:nextRoundNum, readerIdx:nextReaderIdx,
-                    situation:'', submissions:{}, tableCards:[], winnerIdx:-1,
-                    readerSits:sits, usedSituations:[...used,...sits], tiebreak:false });
-}
-
-function showLiveScores(){
-  const room=S.room; if(!room) return;
-  const players=Object.values(room.players||{}).sort((a,b)=>(b.score||0)-(a.score||0));
-  document.getElementById('live-scoreboard').innerHTML=players.map((p,i)=>`
-    <div class="score-row ${i===0?'winner':''}">
-      <div class="score-rank">${['🥇','🥈','🥉'][i]||(i+1)+'.'}</div>
-      <div class="score-name">${p.name}</div>
-      <div class="score-pts">${p.score||0}</div>
-    </div>`).join('');
-  openModal('modal-scores');
-}
-
-// ═══════════════════════════════════════════════════
-//  END
-// ═══════════════════════════════════════════════════
-function showEndScreen(room){
-  const players=Object.values(room.players||{}).sort((a,b)=>(b.score||0)-(a.score||0));
-  const extra = room.rounds !== 9999 && (room.currentRound||1) > room.rounds;
-  document.getElementById('winner-text').textContent =
-    `🎉 ${players[0].name} победил с ${players[0].score||0} очками!` +
-    (extra ? ' (в дополнительном раунде)' : '');
-  document.getElementById('final-scoreboard').innerHTML=players.map((p,i)=>`
-    <div class="score-row ${i===0?'winner':''}">
-      <div class="score-rank">${['🥇','🥈','🥉'][i]||(i+1)+'.'}</div>
-      <div class="score-name">${p.name}</div>
-      <div class="score-pts">${p.score||0} очков</div>
-    </div>`).join('');
-  showScreen('screen-end'); spawnConfetti();
-}
-
-function exitToHome(){
-  unsubscribeRoom();
-  clearSession();
-  _lastRoomJson=''; S.roomCode=''; S.myIdx=-1; S.isHost=false; S.myHand=[];
-  hideHamburger();
-  showScreen('screen-welcome');
-}
-
-function spawnConfetti(){
-  const c=document.getElementById('confetti'); c.innerHTML='';
-  const cols=['#ff3d6b','#ffcc00','#00e5ff','#ff6b35','#00c97a','#a855f7'];
-  for(let i=0;i<90;i++){
-    const el=document.createElement('div'); el.className='confetti-piece';
-    el.style.cssText=`left:${Math.random()*100}%;background:${cols[~~(Math.random()*cols.length)]};width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;border-radius:${Math.random()>.5?'50%':'3px'};animation-duration:${1.5+Math.random()*2.5}s;animation-delay:${Math.random()*1.5}s`;
-    c.appendChild(el);
-  }
-}
-</script>
 </body>
 </html>

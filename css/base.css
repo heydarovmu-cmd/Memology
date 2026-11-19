@@ -1,0 +1,22 @@
+/* ═══ DOODLE NOTEBOOK — общие токены и основа для игры и админки ═══ */
+:root{
+  --bg:#F8F8FF;--card:#FFFFFF;--card2:#FFFFFF;--border:#C9CFE0;
+  --ink:#26323F;
+  --accent:#C2255C;--accent2:#B35C00;--accent3:#1971C2;
+  --green:#2F7D3A;--purple:#7048E8;
+  --text:#26323F;--muted:#5C6B7A;--r:18px;
+  --hl:#FFE066;--pink-s:#FFC9DE;--blue-s:#A5D8FF;--green-s:#B2F2BB;--violet-s:#E5DBFF;--felt:#EBFBEE;
+  --sk1:255px 15px 225px 15px/15px 225px 15px 255px;
+  --sk2:15px 225px 15px 255px/255px 15px 225px 15px;
+  --sk3:225px 15px 255px 15px/15px 255px 15px 225px;
+  --blob:52% 48% 55% 45%/48% 55% 45% 52%;
+  --hand:'Pangolin',cursive;--body:'Balsamiq Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh}
+h1,h2,h3{font-family:var(--hand);font-weight:400}
+[hidden]{display:none!important}
+.muted{color:var(--muted)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}

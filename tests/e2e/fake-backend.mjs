@@ -1,0 +1,243 @@
+// In-memory модель бэкенда Memology (Supabase): таблица rooms с RPC
+// patch_room / play_card, realtime-рассылка и REST для контента.
+//
+// Серверные функции в репозитории не лежат, поэтому их поведение
+// воспроизведено по контракту, на который опирается клиент:
+//   patch_room(p_code, p_paths) — каждый ключ вида "a/b/c" пишется через
+//     jsonb_set(create_missing => true): создаётся только последний ключ,
+//     если промежуточного нет — запись молча не происходит.
+//   play_card(p_code, p_player, p_index) — карта из руки уходит в
+//     submissions[p_player], на её место встаёт верхняя карта колоды
+//     (если колода пуста — рука укорачивается).
+//
+// Задержки и порядок доставки настраиваются, чтобы ловить гонки.
+
+const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rnd = ([a, b]) => a + Math.random() * (b - a);
+
+export function jsonbSet(target, path, value) {
+  if (!path.length) return clone(value);
+  const root = clone(target);
+  let cur = root;
+  for (const k of path.slice(0, -1)) {
+    if (Array.isArray(cur)) {
+      const i = Number(k);
+      if (!Number.isInteger(i) || i < 0 || i >= cur.length) return target;
+      cur = cur[i];
+    } else if (cur && typeof cur === 'object') {
+      if (!(k in cur)) return target;
+      cur = cur[k];
+    } else {
+      return target;
+    }
+  }
+  const last = path[path.length - 1];
+  if (Array.isArray(cur)) {
+    const i = Number(last);
+    if (!Number.isInteger(i)) return target;
+    if (i >= 0 && i < cur.length) cur[i] = clone(value);
+    else cur.push(clone(value));
+  } else if (cur && typeof cur === 'object') {
+    cur[last] = clone(value);
+  } else {
+    return target;
+  }
+  return root;
+}
+
+export function makeContent({ memes = 40, situations = 30 } = {}) {
+  return {
+    memes: Array.from({ length: memes }, (_, i) => ({
+      id: i + 1, title: `Мем ${i + 1}`, image_url: `https://img.test/m${i + 1}.svg`, active: true,
+    })),
+    situations: Array.from({ length: situations }, (_, i) => ({
+      id: i + 1, text: `Ситуация номер ${i + 1}`, active: true,
+    })),
+  };
+}
+
+export class FakeBackend {
+  constructor(opts = {}) {
+    this.opts = {
+      rpcDelay: [5, 30],      // задержка до применения изменения на «сервере»
+      replyDelay: [5, 30],    // задержка ответа клиенту после применения
+      pollDelay: [5, 30],     // задержка ответа на select (снимок берётся в момент запроса)
+      rtDelay: [10, 60],      // задержка realtime-события
+      rtDropRate: 0,          // доля потерянных realtime-событий
+      ...opts,
+    };
+    const content = opts.content || makeContent(opts.contentSize);
+    this.memes = content.memes;
+    this.situations = content.situations;
+    this.suggestions = [];
+    this.rooms = new Map();
+    this.subs = new Map();      // page -> Set(channel names)
+    this.chains = new Map();    // page -> promise (порядок доставки)
+    this.failNext = new Map();  // rpc name -> error message (один раз)
+    this.contentDown = false;
+    this.history = new Map();   // code -> прошлые версии (для «устаревших» ответов)
+    this.staleFor = new Map();  // page -> на сколько версий назад ответить на ближайший select
+    this.log = [];
+    this.writes = 0;
+  }
+
+  room(code) { return this.rooms.get(code); }
+
+  async handle(source, op, args) {
+    const page = source.page;
+    args = clone(args);   // как настоящий supabase-js: undefined-поля не доходят до сервера
+    if (op === 'subscribe') {
+      if (!this.subs.has(page)) this.subs.set(page, new Set());
+      this.subs.get(page).add(args.name);
+      return null;
+    }
+    if (op === 'select') {
+      const code = args.filters.code;
+      let snap = clone(this.rooms.get(code));
+      const back = this.staleFor.get(page);
+      if (back) {
+        this.staleFor.delete(page);
+        const h = this.history.get(code) || [];
+        snap = clone(h[Math.max(0, h.length - 1 - back)]);
+        this.log.push({ t: Date.now(), why: 'stale-select', code, phase: snap?.phase });
+      }
+      await sleep(rnd(this.opts.pollDelay));
+      return { data: snap ? { data: snap } : null, error: null };
+    }
+    if (op === 'upsert') {
+      await sleep(rnd(this.opts.rpcDelay));
+      this.commit(args.row.code, clone(args.row.data), 'upsert');
+      await sleep(rnd(this.opts.replyDelay));
+      return { data: null, error: null };
+    }
+    if (op === 'rpc') {
+      await sleep(rnd(this.opts.rpcDelay));
+      const fail = this.failNext.get(args.name);
+      if (fail) {
+        this.failNext.delete(args.name);
+        return { data: null, error: { message: fail } };
+      }
+      let result;
+      try {
+        result = this.rpc(args.name, args.args);
+      } catch (e) {
+        return { data: null, error: { message: e.message } };
+      }
+      await sleep(rnd(this.opts.replyDelay));
+      return { data: result, error: null };
+    }
+    throw new Error('unknown op ' + op);
+  }
+
+  rpc(name, a) {
+    const cur = this.rooms.get(a.p_code);
+    if (!cur) throw new Error('room not found');
+    let next = cur;
+    if (name === 'patch_room') {
+      for (const [k, v] of Object.entries(a.p_paths)) next = jsonbSet(next, k.split('/'), v);
+    } else if (name === 'play_card') {
+      next = clone(cur);
+      const hand = next.hands?.[a.p_player];
+      if (!hand || a.p_index < 0 || a.p_index >= hand.length) throw new Error('bad card index');
+      const [card] = hand.splice(a.p_index, 1);
+      next.submissions = next.submissions || {};
+      next.submissions[a.p_player] = card;
+      const deck = next.deck || [];
+      if (deck.length) hand.splice(a.p_index, 0, deck.shift());
+      next.deck = deck;
+    } else {
+      throw new Error('unknown rpc ' + name);
+    }
+    this.commit(a.p_code, next, name);
+    return clone(next);
+  }
+
+  commit(code, data, why) {
+    this.rooms.set(code, data);
+    if (!this.history.has(code)) this.history.set(code, []);
+    this.history.get(code).push(clone(data));
+    this.writes++;
+    this.log.push({ t: Date.now(), why, code, phase: data.phase, round: data.currentRound });
+    this.broadcast(code, clone(data));
+  }
+
+  broadcast(code, data) {
+    for (const [page, names] of this.subs) {
+      if (!names.has('room:' + code) || page.isClosed()) continue;
+      const prev = this.chains.get(page) || Promise.resolve();
+      const next = prev.then(async () => {
+        await sleep(rnd(this.opts.rtDelay));
+        if (Math.random() < this.opts.rtDropRate || page.isClosed()) return;
+        await page.evaluate(([c, d]) => window.__rtPush && window.__rtPush(c, d), [code, data]).catch(() => {});
+      });
+      this.chains.set(page, next);
+    }
+  }
+
+  // ── REST: контент и предложения (игра и админка) ─────────────────
+  tableRows(table) {
+    return { memes: this.memes, situations: this.situations, suggestions: this.suggestions }[table];
+  }
+
+  async handleRest(route) {
+    const req = route.request();
+    const url = new URL(req.url());
+    const m = url.pathname.match(/^\/rest\/v1\/(\w+)/);
+    if (!m) return route.fulfill({ status: 404, body: 'not found' });
+    const table = m[1];
+    const rows = this.tableRows(table);
+    if (!rows) return route.fulfill({ status: 404, body: 'no table' });
+    if (this.contentDown) return route.fulfill({ status: 503, body: 'down' });
+    if (this.opts.contentDelay && table !== 'suggestions') await sleep(this.opts.contentDelay);
+
+    const p = url.searchParams;
+    const match = r => {
+      for (const [k, v] of p) {
+        if (['select', 'order', 'limit'].includes(k)) continue;
+        const [opr, val] = v.split(/\.(.*)/s);
+        const cell = String(r[k]);
+        if (opr === 'eq' && cell !== val) return false;
+        if (opr === 'gt' && !(Number(r[k]) > Number(val))) return false;
+      }
+      return true;
+    };
+    const method = req.method();
+    const json = b => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+
+    if (method === 'GET') {
+      let out = rows.filter(match);
+      const ord = p.get('order');
+      if (ord) {
+        const [col, dir] = ord.split('.');
+        out = [...out].sort((a, b) => (a[col] > b[col] ? 1 : -1) * (dir === 'desc' ? -1 : 1));
+      }
+      if (p.get('limit')) out = out.slice(0, Number(p.get('limit')));
+      return json(out);
+    }
+    if (method === 'POST') {
+      const body = JSON.parse(req.postData() || '[]');
+      const list = Array.isArray(body) ? body : [body];
+      const made = list.map(r => {
+        const id = (rows.reduce((mx, x) => Math.max(mx, x.id), 0)) + 1;
+        const row = { id, created_at: new Date().toISOString(), handled: false, active: true, ...r };
+        rows.push(row);
+        return row;
+      });
+      return json(made);
+    }
+    if (method === 'PATCH') {
+      const body = JSON.parse(req.postData() || '{}');
+      const hit = rows.filter(match);
+      hit.forEach(r => Object.assign(r, body));
+      return json(hit);
+    }
+    if (method === 'DELETE') {
+      const keep = rows.filter(r => !match(r));
+      const gone = rows.length - keep.length;
+      rows.splice(0, rows.length, ...keep);
+      return json(Array(gone).fill({}));
+    }
+    return route.fulfill({ status: 405, body: '' });
+  }
+}
