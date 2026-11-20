@@ -3,7 +3,7 @@ import { $, esc, toast as baseToast, bindActions, softenBrokenImages } from '../
 import { SUPABASE } from '../config.js';
 import { parseCSV, extractSituations, ocrLines, normalize, titleFromFile, storageName } from './import.js';
 import { signIn, signOut, accessToken, currentUser, markAdminDevice } from './auth.js';
-import { securitySQL, fullSQL } from './sql.js';
+import { setupSQL, SQL_VERSION } from './sql.js';
 
 const toast = (msg, type = '') => baseToast(msg, 3000, type);
 const fail = e => (e instanceof AuthError ? showLogin(e.message) : toast(`Ошибка: ${e.message}`, 'error'));
@@ -82,23 +82,30 @@ async function logout() {
   showLogin();
 }
 
-// Админ ли вошедший? Если сервер ещё не настроен — показать SQL с его id
+// Админ ли вошедший и выполнен ли актуальный SQL? Если нет — показать SQL с его id
+async function rpcValue(name) {
+  try { return await api(`rpc/${name}`, { method: 'POST', body: '{}' }); }
+  catch (e) { if (e instanceof AuthError) throw e; return null; }   // функции ещё нет — база не настроена
+}
+
 async function checkAdmin() {
   setStatus('Проверка...', 'loading');
-  let isAdmin = false;
+  let isAdmin, version;
   try {
-    isAdmin = await api('rpc/is_admin', { method: 'POST', body: '{}' }) === true;
+    [isAdmin, version] = await Promise.all([rpcValue('is_admin'), rpcValue('mg_version')]);
   } catch (e) {
-    if (e instanceof AuthError) return showLogin(e.message);
-    isAdmin = false;   // функции is_admin ещё нет — база не настроена
+    return showLogin(e.message);
   }
+  isAdmin = isAdmin === true;
   markAdminDevice(isAdmin);
   const user = currentUser();
-  if (!isAdmin) {
+  if (!isAdmin || !(version >= SQL_VERSION)) {
     showView('setup');
-    setStatus('Не админ', 'error');
-    $('setup-email').textContent = user?.email || '';
-    $('setup-sql').textContent = securitySQL(user.id);
+    setStatus(isAdmin ? 'Нужно обновить SQL' : 'Не админ', 'error');
+    $('setup-lead').innerHTML = isAdmin
+      ? 'Игра обновилась: карты теперь раздаёт сервер. Выполни обновлённый SQL — без него игра не запустится.'
+      : `Ты вошёл как <strong>${esc(user?.email || '')}</strong>, но база ещё не знает, что ты админ.`;
+    try { $('setup-sql').textContent = await setupSQL(user.id); } catch (e) { fail(e); }
     return;
   }
   showView('admin');
@@ -454,7 +461,9 @@ async function clearHandled() {
 
 // ── SQL ────────────────────────────────────────────────
 const copy = text => navigator.clipboard.writeText(text).then(() => toast('SQL скопирован!', 'success'));
-const showSQL = () => { $('sql-code').textContent = fullSQL(currentUser().id); $('sql-modal').hidden = false; };
+const showSQL = async () => {
+  try { $('sql-code').textContent = await setupSQL(currentUser().id); $('sql-modal').hidden = false; } catch (e) { fail(e); }
+};
 const closeSQL = () => { $('sql-modal').hidden = true; };
 
 // ── Запуск ─────────────────────────────────────────────

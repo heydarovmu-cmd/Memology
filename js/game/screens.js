@@ -2,7 +2,7 @@
 import { $, esc } from '../shared/dom.js';
 import { AVATARS, COLORS, GAME } from '../config.js';
 import {
-  seats, activePlayers, hostIdx, roundText, roundsLabel, standings, verdict, pointsWord, inGame,
+  seats, hostIdx, roundText, roundsLabel, standings, verdict, pointsWord, inGame,
 } from './rules.js';
 import { S, amHost } from './state.js';
 import { memeImg, showHamburger } from './ui.js';
@@ -55,7 +55,7 @@ export function renderPokerTable(containerId, room) {
   const players = seats(room).filter(p => inGame(room, p.idx));
   const n = players.length;
   if (!n) return;
-  const subs = room.submissions || {};
+  const subs = room.submitted || {};
   const cx = 50, cy = 50, rx = 44, ry = 40;
 
   el.innerHTML = '<div class="poker-logo">MEMOLOGY</div>' + players.map((p, i) => {
@@ -81,8 +81,9 @@ export function renderPokerTable(containerId, room) {
 }
 
 // ── Читающий выбирает ситуацию ─────────────────────────
+// Две ситуации на выбор знает только читающий: они приходят в его S.view
 export function renderReader(room) {
-  const sits = room.readerSits || ['', ''];
+  const sits = S.view?.sits?.length ? S.view.sits : ['', ''];
   S.shownSits = [...sits];
   S.flipped = false;
   $('reader-round-badge').textContent = roundText(room);
@@ -98,7 +99,7 @@ export function renderReader(room) {
     <div class="sit-divider"></div>
     <div class="sit-half bottom" id="sh-bot" data-action="readerTap" data-half="1">
       <div class="sit-tap" id="tap-b">нажми чтобы развернуть</div>
-      <div class="sit-text">${esc(sits[1])}</div>
+      <div class="sit-text">${esc(sits[1] ?? sits[0])}</div>
       <div class="sit-label">Ситуация Б</div>
     </div>`;
 }
@@ -122,8 +123,9 @@ export function renderWaitingSit(room) {
 }
 
 // ── Выбор мема ─────────────────────────────────────────
+// Рука — только своя, из S.view
 export function renderPick(room) {
-  const hand = room.hands?.[S.myIdx] || [];
+  const hand = S.view?.hand || [];
   S.selectedHand = null;
   $('pick-round-badge').textContent = roundText(room);
   $('pick-sit-text').textContent = room.situation || '—';
@@ -137,7 +139,7 @@ export function renderPick(room) {
 }
 
 export function updatePick(room) {
-  const left = (room.deck || []).length;
+  const left = room.deckCount ?? 0;
   const badge = $('deck-badge');
   badge.textContent = '🂠 ' + left;
   badge.classList.toggle('deck-low', left <= GAME.handSize);
@@ -265,4 +267,3 @@ export function renderEnd(room) {
   $('final-scoreboard').innerHTML = scoreRows(room, true);
 }
 
-export { activePlayers };

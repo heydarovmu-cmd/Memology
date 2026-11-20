@@ -1,8 +1,9 @@
-// Сквозные сценарии игры: несколько игроков в отдельных браузерах
-// против модели бэкенда. Запуск: npm test (или node --test tests/e2e).
+// Сквозные сценарии игры: несколько игроков в отдельных браузерах против
+// настоящей серверной логики (supabase/setup.sql в локальном Postgres).
+// Запуск: npm test (или node --test tests/e2e).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { Game, closeBrowser } from './harness.mjs';
+import { Game, closeBrowser, database } from './harness.mjs';
 
 after(closeBrowser);
 
@@ -23,8 +24,8 @@ async function playToEnd(g, { winner, maxRounds = 40, between } = {}) {
   const played = new Set();
   for (let i = 0; i < maxRounds; i++) {
     const res = await g.playRound({ winner });
-    Object.values(g.room().submissions).forEach(c => played.add(c.id));
-    g.checkCards(played);
+    g.room().tableCards.forEach(c => played.add(c.id));
+    await g.checkCards(played);
     if (res.phase === 'end') return;
     if (between) await between(g);
     await g.nextRound();
@@ -91,17 +92,24 @@ test('ничья после последнего раунда — дополни
   assert.match(text, /дополнительном/);
 }));
 
-test('бесконечная игра заканчивается, когда кончаются мемы; ничья показана честно', () =>
-  withGame({ backend: { contentSize: { memes: 17, situations: 30 } } }, async g => {
+test('бесконечная игра заканчивается, когда кончаются мемы; ничья показана честно', () => withGame({}, async g => {
+  const db = await database();
+  await db.query('update memes set active = id <= 17;');
+  try {
     const host = await g.setup(3, { rounds: Infinity });
     await g.start(host);
+    assert.equal(g.room().deckCount, 2, 'в колоде остаток после раздачи 3×5');
     await playToEnd(g, { winner: lowestScorer });
     for (const p of g.players) await p.waitScreen('screen-end');
+    assert.equal(g.room().endReason, 'cards');
     const s = Object.values(scores(g));
     const top = Math.max(...s);
     const text = await host.page.textContent('#winner-text');
     if (s.filter(v => v === top).length > 1) assert.match(text, /[Нн]ичья/, `при равенстве очков нельзя объявлять одного победителя: «${text}»`);
-  }));
+  } finally {
+    await db.query('update memes set active = true;');
+  }
+}));
 
 test('обновление страницы на любой фазе возвращает в игру', () => withGame({}, async g => {
   const host = await g.setup(3, { rounds: 5 });
@@ -161,7 +169,7 @@ test('проверки при входе в комнату', () => withGame({}, 
   await p.page.waitForFunction(() => /заполнена/.test(document.getElementById('toast').textContent));
 
   await g.start(host);
-  g.room().maxPlayers = 10;
+  await g.backend.db.query(`update rooms set data = jsonb_set(data, '{maxPlayers}', '10') where code = '${g.code}';`);
   await p.page.click('#screen-join .btn-cyan');
   await p.page.waitForFunction(() => /уже идёт/.test(document.getElementById('toast').textContent));
   assert.equal(await p.screen(), 'screen-join');
@@ -177,7 +185,6 @@ test('одновременный вход нескольких игроков: �
     for (const n of names) { const p = await g.newPlayer(n); await p.fillJoin(n, g.code); ps.push(p); }
     await Promise.all(ps.map(p => p.page.click('#screen-join .btn-cyan')));
     await Promise.all(ps.map(p => p.waitScreen('screen-lobby')));
-    await sleep(3500);  // дать клиентам заметить и исправить конфликт мест
     for (const p of ps) await p.syncIdx();
     const room = g.room();
     const seated = Object.values(room.players).filter(Boolean);
@@ -187,17 +194,24 @@ test('одновременный вход нескольких игроков: �
   }));
 
 test('вход в момент старта игры не ломает партию', () =>
-  withGame({ backend: { contentDelay: 800 } }, async g => {
+  withGame({ backend: { rpcDelay: [100, 300] } }, async g => {
     const host = await g.setup(3, { rounds: 5, maxPlayers: 5 });
     const late = await g.newPlayer('Опоздавший');
     await late.fillJoin('Опоздавший', g.code);
-    await late.page.click('#screen-join .btn-cyan');
-    await sleep(200);                    // запрос комнаты прошёл, контент ещё грузится
-    await g.start(host);
+    await Promise.all([late.page.click('#screen-join .btn-cyan'), g.start(host)]);
     await sleep(1500);
-    assert.notEqual(await late.screen(), 'screen-pick', 'опоздавший не должен попасть в раунд без карт');
+    // Сервер решает однозначно: либо успел сесть и получил карты, либо игра уже идёт
+    await late.syncIdx();
+    const seat = g.room().players[late.idx];
+    if (late.idx >= 0 && seat?.name === 'Опоздавший') {
+      assert.equal(seat.playing, true);
+      assert.equal((await g.backend.secrets(g.code)).hands[late.idx].length, 5);
+    } else {
+      assert.match(await late.toast(), /уже идёт/);
+      late.gone = true;
+    }
     await playToEnd(g);
-    for (const p of g.players.filter(p => p !== late)) await p.waitScreen('screen-end');
+    for (const p of g.players.filter(p => !p.gone)) await p.waitScreen('screen-end');
   }));
 
 test('выход из лобби освобождает место', () => withGame({}, async g => {
@@ -228,7 +242,9 @@ test('игрок выходит посреди раунда — игра про�
   await leaver.waitScreen('screen-welcome');
   for (const p of [host, g.byIdx(2)]) { await p.waitScreen('screen-pick'); await p.submitCard(0); }
   await g.waitFor(() => g.room().phase === 'judging', 'голосование без ушедшего', 8000);
-  assert.ok(g.room().tableCards.every(c => c.playerIdx !== 3));
+  const { owners } = await g.backend.secrets(g.code);
+  assert.equal(owners.length, 2);
+  assert.ok(!owners.includes(3), 'мем ушедшего остался на столе');
   await reader.judge(0);
   await g.waitFor(() => g.room().phase === 'result', 'result');
   await g.nextRound();
@@ -258,15 +274,19 @@ test('хост выходит — управление переходит дру
 test('имя игрока выводится как текст, а не как HTML', () => withGame({}, async g => {
   const host = await g.newPlayer('Агшин');
   g.code = await host.createRoom('Агшин', 3, 5);
-  const evil = await g.newPlayer('evil');
-  await evil.fillJoin('x', g.code);
-  await evil.page.evaluate(() => { document.getElementById('join-name').value = '<img src=x onerror="window.__xss=1"><i>Аня'; });
-  await evil.page.click('#screen-join .btn-cyan');
-  await evil.waitScreen('screen-lobby');
-  await host.page.waitForFunction(() => document.querySelectorAll('#lobby-slots .slot-name').length >= 2);
+  for (const name of ['<svg onload=__x=1>', '<i>Аня</i>']) {
+    const evil = await g.newPlayer('evil');
+    await evil.fillJoin('x', g.code);
+    await evil.page.evaluate(n => { document.getElementById('join-name').value = n; }, name);
+    await evil.page.click('#screen-join .btn-cyan');
+    await evil.waitScreen('screen-lobby');
+  }
+  await host.page.waitForFunction(() => document.querySelectorAll('#lobby-slots .slot-name').length >= 3);
   await sleep(300);
-  assert.equal(await host.page.evaluate(() => window.__xss), undefined, 'скрипт из имени выполнился у хоста');
-  assert.match(await host.page.textContent('#lobby-slots'), /<i>Аня/);
+  assert.equal(await host.page.evaluate(() => window.__x), undefined, 'скрипт из имени выполнился у хоста');
+  const text = await host.page.textContent('#lobby-slots');
+  assert.match(text, /<svg onload/);
+  assert.match(text, /<i>Аня<\/i>/);
 }));
 
 test('устаревший ответ сервера не откатывает игру и не подменяет победителя', () => withGame({}, async g => {
@@ -308,7 +328,7 @@ test('двойные нажатия не ломают ход игры', () => wi
   const reader = g.byIdx(g.room().readerIdx);
   await reader.waitScreen('screen-reader');
   const shown = await reader.page.textContent('#sh-top .sit-text');
-  assert.equal(shown, g.room().readerSits[0], 'читающий видит не те ситуации, что в комнате');
+  assert.equal(shown, (await g.backend.secrets(g.code)).sits[0], 'читающий видит не те ситуации, что выдал сервер');
 
   await g.playRound();
   const round = g.room().currentRound;
@@ -342,7 +362,7 @@ test('ошибка сети при отправке мема: подсказка
   await reader.page.click('#sh-top');
   const p = g.active().find(x => x !== reader);
   await p.waitScreen('screen-pick');
-  g.backend.failNext.set('play_card', 'boom');
+  g.backend.failNext.set('mg_play', 'Failed to fetch');
   await p.page.locator('#pick-hand .hand-card').first().click();
   await p.page.click('#lb-go');
   await p.page.click('#submit-btn');
@@ -367,38 +387,44 @@ test('предложение из меню доходит до базы', () => 
   assert.equal(s.room, g.code);
 }));
 
-test('без связи с базой: игра берёт сохранённый контент или честно сообщает об ошибке', () => withGame({}, async g => {
-  const fresh = await g.newPlayer('Новый');
-  g.backend.contentDown = true;
-  await fresh.btn('Создать комнату').click();
-  await fresh.page.fill('#host-name', 'Новый');
-  await fresh.page.locator('.players-grid .num-btn', { hasText: /^3$/ }).click();
-  await fresh.btn('Создать комнату').click();
-  await fresh.page.waitForFunction(() => /Ошибка загрузки/.test(document.getElementById('toast').textContent));
-  assert.notEqual(await fresh.screen(), 'screen-lobby');
-
-  g.backend.contentDown = false;
-  const host = await g.newPlayer('Агшин');
-  g.code = await host.createRoom('Агшин', 3, 5);
-  await host.menu('Выйти');
-  await host.reload();
-  g.backend.contentDown = true;
-  await host.createRoom('Агшин', 3, 5);
-  assert.match(await host.toast(), /сохранённом/);
+test('сервер без новой версии SQL: игра честно сообщает, что обновляется', () => withGame({}, async g => {
+  g.backend.missingFunctions = true;
+  const p = await g.newPlayer('Агшин');
+  await p.btn('Создать комнату').click();
+  await p.page.fill('#host-name', 'Агшин');
+  await p.page.locator('.players-grid .num-btn', { hasText: /^3$/ }).click();
+  await p.btn('Создать комнату').click();
+  await p.page.waitForFunction(() => /Игра обновляется/.test(document.getElementById('toast').textContent));
+  assert.notEqual(await p.screen(), 'screen-lobby');
+  g.backend.missingFunctions = false;
+  await p.btn('Создать комнату').click();
+  await p.waitScreen('screen-lobby');
 }));
 
-test('новая комната не затирает существующую с тем же кодом', () => withGame({}, async g => {
-  g.backend.rooms.set('AAAA', { code: 'AAAA', phase: 'lobby', hostName: 'Чужой', players: { 0: { name: 'Чужой', idx: 0, score: 0 } }, playerCount: 1, rounds: 5, maxPlayers: 3 });
-  const host = await g.newPlayer('Агшин');
-  await host.page.evaluate(() => { const r = Math.random; let n = 0; window.__armCode = () => { n = 0; Math.random = () => (n++ < 4 ? 0 : r()); }; });
-  await host.btn('Создать комнату').click();
-  await host.page.fill('#host-name', 'Агшин');
-  await host.page.locator('.players-grid .num-btn', { hasText: /^3$/ }).click();
-  await host.page.evaluate(() => window.__armCode());
-  await host.btn('Создать комнату').click();
-  await host.waitScreen('screen-lobby');
-  assert.equal(g.backend.rooms.get('AAAA').players[0].name, 'Чужой', 'чужая комната перезаписана');
-  assert.notEqual((await host.page.textContent('#lobby-code')).trim(), 'AAAA');
+test('игрок получает только свои карты: ни каталога, ни чужих рук', () => withGame({}, async g => {
+  const host = await g.setup(3, { rounds: 5 });
+  await g.start(host);
+  const seen = [];
+  const p = g.active().find(x => x.idx !== g.room().readerIdx);
+  p.page.on('response', async res => {
+    if (res.url().includes('supabase')) seen.push(await res.text().catch(() => ''));
+  });
+  // Публичное состояние комнаты, которое видят все
+  const room = await g.backend.load(g.code);
+  for (const key of ['deck', 'hands', 'readerSits', 'submissions', 'tokens']) assert.ok(!(key in room), `в комнате есть ${key}`);
+  // То, что вернёт сервер этому игроку
+  const token = await p.page.evaluate(() => JSON.parse(localStorage.getItem('mg_cid')));
+  const view = await g.backend.db.rpc('mg_view', { p_code: g.code, p_token: token });
+  const s = await g.backend.secrets(g.code);
+  assert.deepEqual(view.hand.map(c => c.id), s.hands[p.idx].map(c => c.id));
+  assert.equal((view.sits || []).length, 0, 'не читающему ситуации не показываются');
+  const mine = new Set(view.hand.map(c => c.id));
+  const shown = await p.page.evaluate(() => [...document.querySelectorAll('img')].map(i => i.getAttribute('src')));
+  for (const src of shown.filter(x => /img\.test/.test(x))) assert.ok(mine.has(Number(src.match(/m(\d+)/)[1])), `чужая карта на экране: ${src}`);
+  // Чужой токен ничего не даёт
+  await assert.rejects(g.backend.db.rpc('mg_view', { p_code: g.code, p_token: 'x'.repeat(24) }), /not_in_room|нет|player/);
+  await g.playRound();
+  assert.ok(!seen.some(t => /"hands"|"deck"/.test(t)));
 }));
 
 test('модальные окна и просмотр мема', () => withGame({}, async g => {

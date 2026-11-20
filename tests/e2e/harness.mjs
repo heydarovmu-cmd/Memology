@@ -1,11 +1,13 @@
 // Тестовый стенд: несколько игроков (отдельные браузерные контексты)
-// против одного FakeBackend. Игра открывается с выдуманного домена
-// https://memology.test/, все внешние запросы перехватываются.
+// против одного FakeBackend поверх настоящего Postgres с supabase/setup.sql.
+// Игра открывается с выдуманного домена https://memology.test/,
+// все внешние запросы перехватываются.
 import { chromium } from 'playwright';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FakeBackend } from './fake-backend.mjs';
+import { startPg } from '../db/pg.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const SITE_DIR = process.env.SITE_DIR || path.resolve(HERE, '../..');
@@ -21,8 +23,17 @@ export function browser() {
   return browserPromise;
 }
 export async function closeBrowser() {
-  if (browserPromise) (await browserPromise).close();
+  if (browserPromise) await (await browserPromise).close();
   browserPromise = null;
+  if (dbPromise) await (await dbPromise).stop();
+  dbPromise = null;
+}
+
+// Один Postgres на файл тестов: комнаты друг другу не мешают
+let dbPromise = null;
+export function database() {
+  dbPromise ||= startPg();
+  return dbPromise;
 }
 
 const memeSvg = id => `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
@@ -37,6 +48,7 @@ export class Game {
   }
 
   async newPlayer(label, { url, storage } = {}) {
+    this.backend.db ||= await database();
     const b = await browser();
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'ru-RU' });
     await ctx.exposeBinding('__sb', (source, op, args) => this.backend.handle(source, op, args));
@@ -102,7 +114,7 @@ export class Game {
 
   async describe() {
     const r = this.room();
-    const lines = [`backend: phase=${r?.phase} round=${r?.currentRound} reader=${r?.readerIdx} subs=${Object.keys(r?.submissions || {})}`];
+    const lines = [`backend: phase=${r?.phase} round=${r?.currentRound} reader=${r?.readerIdx} submitted=${Object.keys(r?.submitted || {})}`];
     for (const p of this.players) lines.push(`  ${p.label} idx=${p.idx} screen=${await p.screen().catch(() => '?')}`);
     return lines.join('\n');
   }
@@ -138,10 +150,11 @@ export class Game {
     for (const p of this.active()) if (p !== reader) await p.waitScreen('screen-waiting-sit');
 
     if (choose === 1) { await reader.page.click('#sh-bot'); await sleep(50); }
+    const sits = (await this.backend.secrets(this.code)).sits;
     await reader.page.click(choose === 1 ? '#sh-bot' : '#sh-top');
     await this.waitFor(() => this.room().phase === 'picking' && this.room().currentRound === round, 'фаза picking');
     const situation = this.room().situation;
-    if (situation !== r0.readerSits[choose]) throw new Error(`Выбрана не та ситуация: ${situation}`);
+    if (situation !== sits[choose]) throw new Error(`Выбрана не та ситуация: ${situation}`);
 
     const others = this.active().filter(p => p !== reader);
     await Promise.all(others.map(async p => {
@@ -153,9 +166,12 @@ export class Game {
     await reader.waitScreen('screen-judge');
     for (const p of others) await p.waitScreen('screen-waiting-judge');
 
+    // Авторы на столе скрыты; тест подсматривает их в секретах сервера
     const table = this.room().tableCards;
+    if (table.some(c => 'playerIdx' in c)) throw new Error('Авторы мемов видны до голосования');
+    const owners = (await this.backend.secrets(this.code)).owners;
     const want = winner ? winner(this.room()) : null;
-    const res = await reader.judge(want == null ? 0 : null, want == null ? null : table.find(c => c.playerIdx === want).id);
+    const res = await reader.judge(want == null ? 0 : null, want == null ? null : table[owners.indexOf(want)].id);
     await this.waitFor(() => ['result', 'end'].includes(this.room().phase), 'итог раунда');
     const owner = this.room().tableCards.find(c => c.id === res.memeId)?.playerIdx;
     if (this.room().winnerIdx !== owner) {
@@ -166,7 +182,8 @@ export class Game {
 
   active() {
     const r = this.room();
-    return this.players.filter(p => p.idx >= 0 && r.players?.[p.idx] && !r.players[p.idx].left && !p.gone);
+    const inGame = i => r.phase === 'lobby' || r.players?.[i]?.playing;
+    return this.players.filter(p => p.idx >= 0 && r.players?.[p.idx] && !r.players[p.idx].left && inGame(p.idx) && !p.gone);
   }
 
   async nextRound() {
@@ -179,9 +196,9 @@ export class Game {
   }
 
   // Карты не должны дублироваться и пропадать
-  checkCards(played) {
-    const r = this.room();
-    const ids = [...(r.deck || []), ...Object.values(r.hands || {}).flat()].map(c => c.id);
+  async checkCards(played) {
+    const s = await this.backend.secrets(this.code);
+    const ids = [...s.deck, ...Object.values(s.hands).flat()].map(c => c.id);
     const dup = ids.filter((id, i) => ids.indexOf(id) !== i);
     if (dup.length) throw new Error('Дубли карт: ' + dup);
     const back = ids.filter(id => played.has(id));

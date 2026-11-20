@@ -1,4 +1,5 @@
-// Локальное состояние этого устройства. Общая правда — S.room с сервера.
+// Локальное состояние этого устройства. Общая правда — S.room с сервера,
+// своя рука — S.view (только этот игрок её и получает).
 import { hostIdx } from './rules.js';
 
 export const S = {
@@ -6,14 +7,11 @@ export const S = {
   myIdx: -1,
   roomCode: '',
   room: null,
+  view: null,          // { idx, round, hand, played, sits } из mg_view
 
   // форма создания
   selectedPlayers: 0,
   selectedRounds: 5,
-
-  // контент из базы
-  memes: [],
-  situations: [],
 
   // что показано на экране сейчас (действия берут данные отсюда,
   // чтобы игрок выбрал ровно то, что видел)
@@ -33,7 +31,7 @@ export const amReader = () => !!S.room && S.room.readerIdx === S.myIdx;
 
 export function resetRoomState() {
   Object.assign(S, {
-    roomCode: '', room: null, myIdx: -1, screenKey: '',
+    roomCode: '', room: null, view: null, myIdx: -1, screenKey: '',
     shownSits: null, flipped: false, selectedHand: null,
     judgeCards: [], judgeSelected: null, judgeRevealed: false,
   });

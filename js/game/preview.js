@@ -21,23 +21,24 @@ function pvMeme(i) {
 
 function pvRoom() {
   const names = ['Агшин', 'Рустам', 'Лейла', 'Камиль', 'Нигяр'];
-  const players = {}, hands = {};
+  const players = {};
   names.forEach((name, i) => {
-    players[i] = { name, score: [3, 1, 2, 0, 1][i], idx: i };
-    hands[i] = [0, 1, 2, 3, 4].map(pvMeme);
+    players[i] = { name, score: [3, 1, 2, 0, 1][i], idx: i, playing: true };
   });
   return {
     code: 'DEMO', hostName: names[0], hostIdx: 0, rounds: 15, maxPlayers: 5,
     phase: 'picking', playerCount: names.length,
     currentRound: 4, readerIdx: 2,
     situation: 'Когда наступил на лего',
-    readerSits: ['Когда наступил на лего', 'Когда зашёл в туалет после бати'],
-    submissions: { 0: pvMeme(0), 1: pvMeme(1), 4: pvMeme(4) },
-    hands, deck: [5, 6, 7, 8, 9, 10, 11].map(pvMeme), discard: [pvMeme(0)],
+    submitted: { 0: true, 1: true, 4: true },
+    deckCount: 7,
     tableCards: [{ playerIdx: 0, ...pvMeme(0) }, { playerIdx: 1, ...pvMeme(1) }, { playerIdx: 4, ...pvMeme(4) }],
-    winnerIdx: 1, players, usedSituations: [],
+    winnerIdx: 1, players,
   };
 }
+
+// До голосования авторы мемов на столе неизвестны
+const anon = r => ({ ...r, phase: 'judging', tableCards: r.tableCards.map(({ playerIdx, ...c }) => c) });
 
 // [подпись, экран, idx игрока, отрисовка]
 const SCREENS = [
@@ -52,8 +53,8 @@ const SCREENS = [
   ['Выбор мема', 'screen-pick', 0, V.renderPick],
   ['Мем отправлен', 'screen-waiting-others', 0, V.renderWaitingOthers],
   ['Читающий ждёт', 'screen-reader-wait', 2, V.renderReaderWait],
-  ['Карты рубашкой', 'screen-judge', 2, r => V.renderJudge(r, false)],
-  ['Карты открыты', 'screen-judge', 2, r => V.renderJudge(r, true)],
+  ['Карты рубашкой', 'screen-judge', 2, r => V.renderJudge(anon(r), false)],
+  ['Карты открыты', 'screen-judge', 2, r => V.renderJudge(anon(r), true)],
   ['Ждём судью', 'screen-waiting-judge', 0, V.renderWaitingJudge],
   ['Итог раунда', 'screen-result', 0, V.renderResult],
   ['Финал', 'screen-end', 0, r => V.renderEnd({ ...r, phase: 'end' })],
@@ -63,8 +64,8 @@ export function startPreview() {
   S.preview = true;
   const noop = async () => null;
   useBackend({
-    loadContent: async () => ({ memes: [0, 1, 2, 3, 4, 5].map(pvMeme), situations: ['Ситуация раз', 'Ситуация два'] }),
-    sendSuggestion: noop, fetchRoom: noop, createRoom: noop, patchRoom: noop, playCard: noop,
+    sendSuggestion: noop, fetchRoom: noop, create: noop, join: noop, view: noop, start: noop,
+    choose: noop, play: noop, judge: noop, next: noop, leave: noop,
     subscribe: () => () => {},
   });
   S.myName = 'Агшин';
@@ -88,6 +89,11 @@ export function pvShow(i) {
   const room = pvRoom();
   S.room = room;
   S.myIdx = idx;
+  // Своя рука и ситуации читающего — то, что игрок получает от сервера
+  S.view = {
+    idx, round: room.currentRound, hand: [0, 1, 2, 3, 4].map(pvMeme), played: null,
+    sits: ['Когда наступил на лего', 'Когда зашёл в туалет после бати'],
+  };
   document.querySelectorAll('.pv-btn').forEach((b, n) => b.classList.toggle('act', n === i));
   if (render) render(room);
   showScreen(screen);
