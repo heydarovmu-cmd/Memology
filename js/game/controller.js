@@ -1,11 +1,10 @@
-// Ход игры: действия игрока, реакция на обновления комнаты и обязанности хоста.
+// Ход игры: действия игрока и реакция на обновления комнаты.
+// Правила выполняет сервер (функции mg_*), здесь — только интерфейс.
 import { $, toast } from '../shared/dom.js';
-import { GAME } from '../config.js';
 import { api } from './api.js';
-import { roomCode, randomId } from './random.js';
-import * as R from './rules.js';
+import { inGame } from './rules.js';
 import { S, amHost, amReader, once, resetRoomState } from './state.js';
-import { clientId, saveSession, loadSession, clearSession, cacheContent, cachedContent } from './storage.js';
+import { deviceToken, saveSession, loadSession, clearSession } from './storage.js';
 import { connect, disconnect, receive, onRoom } from './sync.js';
 import {
   showScreen, ensureScreen, activeScreen, openModal, closeModal, showHamburger, hideHamburger,
@@ -13,38 +12,14 @@ import {
 } from './ui.js';
 import * as V from './screens.js';
 
-const netError = e => toast('Ошибка сети: ' + e.message, 3500);
+const say = e => toast(e.message, 3500);
+let leaving = false;
 
-// Записать изменение и сразу применить ответ сервера
-async function patch(p) {
-  const room = await api.patchRoom(S.roomCode, p);
+// Ход на сервере; ответ — новое состояние комнаты
+async function act(fn) {
+  const room = await fn(S.roomCode, deviceToken());
   receive(room);
   return room;
-}
-
-// ── Контент ────────────────────────────────────────────
-async function loadContent() {
-  if (S.memes.length && S.situations.length) return true;   // уже загружено в этой вкладке
-  showScreen('screen-loading');
-  try {
-    const c = await api.loadContent();
-    if (!c.memes.length) throw new Error('Нет мемов в базе данных');
-    if (c.situations.length < 2) throw new Error('Нужно минимум 2 ситуации');
-    S.memes = c.memes;
-    S.situations = c.situations;
-    cacheContent(c);
-    return true;
-  } catch (e) {
-    const c = cachedContent();
-    if (c) {
-      S.memes = c.memes;
-      S.situations = c.situations;
-      toast('Нет связи с базой — играем на сохранённом контенте', 3500);
-      return true;
-    }
-    toast(`Ошибка загрузки: ${e.message}`, 4000);
-    return false;
-  }
 }
 
 // ── Вход в комнату ─────────────────────────────────────
@@ -53,7 +28,10 @@ function enterRoom(code, idx, name, room) {
   S.myIdx = idx;
   S.myName = name;
   S.room = null;
+  S.view = null;
   S.screenKey = '';
+  viewKey = '';
+  leaving = false;
   saveSession({ code, idx, name });
   connect(code);
   showHamburger();
@@ -77,19 +55,12 @@ export async function createRoom() {
   if (!S.selectedRounds) return toast('Выбери число раундов!');
 
   await once('create', async () => {
-    if (!await loadContent()) { showScreen('screen-create'); return; }
+    showScreen('screen-loading');
     try {
-      // Код не должен совпасть с чужой живой комнатой (старые сервер удаляет сам)
-      let code = roomCode();
-      for (let i = 0; i < 10 && await api.fetchRoom(code); i++) code = roomCode();
-      const room = R.newRoom({
-        code, seed: randomId(), hostName: name, cid: clientId(),
-        rounds: S.selectedRounds, maxPlayers: S.selectedPlayers,
-      });
-      await api.createRoom(code, room);
-      enterRoom(code, 0, name, room);
+      const room = await api.create(name, deviceToken(), S.selectedRounds, S.selectedPlayers);
+      enterRoom(room.code, 0, name, room);
     } catch (e) {
-      netError(e);
+      say(e);
       showScreen('screen-create');
     }
   });
@@ -103,57 +74,13 @@ export async function joinRoom() {
 
   await once('join', async () => {
     try {
-      const room = await api.fetchRoom(code);
-      if (!room) return toast('Комната не найдена 😕', 3000);
-      if (room.phase !== 'lobby') return toast('Игра уже идёт!', 3000);
-      const max = room.maxPlayers || GAME.maxSeats;
-      if (R.seats(room).filter(p => !p.left).length >= max) return toast(`Комната заполнена (${max}/${max})`, 3000);
-
-      if (!await loadContent()) { showScreen('screen-join'); return; }
-      // Пока грузился контент, в комнату могли войти другие или игра началась
-      const fresh = await api.fetchRoom(code);
-      if (!fresh || fresh.phase !== 'lobby') { showScreen('screen-join'); return toast('Игра уже идёт!', 3000); }
-      const result = await claimSeat(code, fresh, name);
-      if (!result) { showScreen('screen-join'); return; }
-      enterRoom(code, result.idx, name, result.room);
+      // Место выдаёт сервер под блокировкой: одновременные входы не сталкиваются
+      const { idx, room } = await api.join(code, name, deviceToken());
+      enterRoom(code, idx, name, room);
     } catch (e) {
-      netError(e);
+      say(e);
       showScreen('screen-join');
     }
-  });
-}
-
-// Занять свободное место. Игра могла начаться, пока грузился контент, —
-// тогда место сразу освобождается.
-async function claimSeat(code, room, name) {
-  const idx = R.freeSeat(room);
-  if (idx < 0) { toast('Комната заполнена', 3000); return null; }
-  const after = await api.patchRoom(code, R.joinPatch(room, idx, { name, cid: clientId() }));
-  if (after.phase !== 'lobby') {
-    await api.patchRoom(code, { [`players/${idx}`]: { idx, name, left: true } }).catch(() => {});
-    toast('Игра уже идёт!', 3000);
-    return null;
-  }
-  return { idx, room: after };
-}
-
-// Двое заняли одно место одновременно: проигравший переезжает на свободное.
-// В лобби места дешёвые — проверяем свежую комнату, а не возможно старое событие.
-async function fixSeat() {
-  await once('seat', async () => {
-    const room = await api.fetchRoom(S.roomCode).catch(() => null);
-    if (!room || room.phase !== 'lobby') return;
-    const mine = room.players?.[S.myIdx];
-    if (mine && !mine.left && mine.cid === clientId()) return;
-    const max = room.maxPlayers || GAME.maxSeats;
-    if (R.seats(room).filter(p => !p.left).length >= max) {
-      return goHome('Комната заполнена — место заняли раньше');
-    }
-    const r = await claimSeat(S.roomCode, room, S.myName);
-    if (!r) return goHome();
-    S.myIdx = r.idx;
-    saveSession({ code: S.roomCode, idx: r.idx, name: S.myName });
-    receive(r.room);
   });
 }
 
@@ -161,45 +88,57 @@ export async function restoreSession() {
   const s = loadSession();
   if (!s) return false;
   showScreen('screen-loading');
-  const room = await api.fetchRoom(s.code).catch(() => null);
-  const seat = room?.players?.[s.idx];
-  const mine = seat && !seat.left && (!seat.cid || seat.cid === clientId()) && R.inGame(room, s.idx);
-  if (!mine || room.phase === 'end') { clearSession(); showScreen('screen-welcome'); scaleTagline(); return false; }
-  if (!await loadContent()) { showScreen('screen-welcome'); return false; }
-  enterRoom(s.code, s.idx, s.name, room);
-  toast(`С возвращением, ${s.name}!`, 2400);
-  return true;
+  try {
+    const view = await api.view(s.code, deviceToken());
+    const room = await api.fetchRoom(s.code);
+    const me = room?.players?.[view.idx];
+    if (!room || room.phase === 'end' || !me || me.left || !inGame(room, view.idx)) throw new Error('gone');
+    S.view = view;
+    enterRoom(s.code, view.idx, s.name, room);
+    toast(`С возвращением, ${s.name}!`, 2400);
+    return true;
+  } catch {
+    clearSession();
+    showScreen('screen-welcome');
+    scaleTagline();
+    return false;
+  }
 }
 
 // ── Реакция на любое обновление комнаты ────────────────
-onRoom(room => {
+// Своя рука и ситуации читающего подгружаются отдельно (mg_view),
+// когда меняется шаг игры или игрок сделал ход.
+let viewKey = '';
+const viewKeyOf = room => `${room.currentRound}:${room.phase}:${room.submitted?.[S.myIdx] ? 1 : 0}`;
+const needsView = room =>
+  (room.phase === 'reader' && amReader()) || (room.phase === 'picking' && !amReader() && !room.submitted?.[S.myIdx]);
+
+onRoom(async room => {
+  if (leaving) return;
   const me = room.players?.[S.myIdx];
-  const myCid = clientId();
+  if (me?.left) return goHome('Вы вышли из игры');
+  if (room.phase !== 'lobby' && me && !inGame(room, S.myIdx)) return goHome('Игра уже началась без тебя 😕');
 
-  if (room.phase === 'lobby') {
-    if (me && !me.left && me.cid && me.cid !== myCid) fixSeat();
-    const present = R.seats(room).filter(p => !p.left);
-    const max = room.maxPlayers || GAME.maxSeats;
-    if (present.length > max && present.findIndex(p => p.idx === S.myIdx) >= max) {
-      api.patchRoom(S.roomCode, R.leavePatch(room, S.myIdx)).catch(() => {});
-      return goHome('Комната заполнена — место заняли раньше');
+  const key = viewKeyOf(room);
+  if (key !== viewKey && needsView(room) && !S.preview) {
+    viewKey = key;
+    try {
+      S.view = await api.view(S.roomCode, deviceToken());
+    } catch (e) {
+      if (e.code === 'not_in_room' || e.code === 'room_not_found') return goHome(e.message);
+      viewKey = '';   // сеть моргнула — попробуем на следующем обновлении
+      return;
     }
-  } else if (me && !me.left && !R.inGame(room, S.myIdx)) {
-    // Вошёл в последний момент — игра стартовала без него
-    api.patchRoom(S.roomCode, { [`players/${S.myIdx}`]: { ...me, left: true } }).catch(() => {});
-    return goHome('Игра уже началась без тебя 😕');
-  } else if (me && me.cid && me.cid !== myCid) {
-    return goHome('Это место занял другой игрок');
+    if (room !== S.room) return;   // пока ждали, пришло более новое состояние — его и покажем
   }
-
   render(room);
-  hostDuties(room);
 });
 
 function render(room) {
   const round = room.currentRound || 1;
   const k = id => `${id}:${round}`;
   const isReader = amReader();
+  const viewReady = S.view && S.view.round === round;
 
   switch (room.phase) {
     case 'lobby':
@@ -209,8 +148,7 @@ function render(room) {
       break;
     case 'reader':
       if (isReader) {
-        const sitsChanged = JSON.stringify(S.shownSits) !== JSON.stringify(room.readerSits);
-        if (sitsChanged) S.screenKey = '';
+        if (!viewReady) return;
         ensureScreen('screen-reader', k('reader'), () => V.renderReader(room));
       } else {
         ensureScreen('screen-waiting-sit', k('waiting-sit'), () => V.renderWaitingSit(room));
@@ -219,9 +157,10 @@ function render(room) {
     case 'picking':
       if (isReader) {
         ensureScreen('screen-reader-wait', k('reader-wait'), () => V.renderReaderWait(room), () => V.renderReaderWait(room));
-      } else if (room.submissions?.[S.myIdx]) {
+      } else if (room.submitted?.[S.myIdx]) {
         ensureScreen('screen-waiting-others', k('waiting-others'), () => V.renderWaitingOthers(room), () => V.renderWaitingOthers(room));
       } else {
+        if (!viewReady) return;
         ensureScreen('screen-pick', k('pick'), () => V.renderPick(room), () => V.updatePick(room));
       }
       break;
@@ -240,42 +179,13 @@ function render(room) {
   }
 }
 
-// ── Обязанности хоста ──────────────────────────────────
-// Хост переводит игру дальше, когда все сдали мемы, пропускает раунд,
-// если ушёл читающий, и заканчивает игру, если игроков стало мало.
-// Читающий страхует переход к голосованию: он результат ждёт активнее всех.
-function hostDuties(room) {
-  if (S.preview) return;
-  let duty = null;
-  if (amHost()) duty = R.hostDuty(room, S.situations);
-  else if (amReader() && R.readyForJudging(room)) duty = { why: 'judging', patch: R.judgingPatch(room) };
-  if (!duty) return;
-  const key = `duty:${duty.why}:${room.currentRound}:${room.phase}`;
-  once(key, async () => {
-    try {
-      await patch(duty.patch);
-      if (duty.why === 'reader-left') toast('Читающий вышел — раунд пропущен', 3000);
-      if (duty.why === 'few') toast('Игроков меньше трёх — игра окончена', 3500);
-    } catch (e) { netError(e); }
-  });
-}
-
 // ── Действия по ходу игры ──────────────────────────────
 export async function startGame() {
   if (!amHost() || S.room?.phase !== 'lobby') return;
   const btn = $('lobby-start-btn');
   btn.disabled = true;
   await once('start', async () => {
-    try {
-      // Раздаём карты по свежему списку: экран хоста мог не успеть показать
-      // только что вошедших — они остались бы без руки
-      const fresh = await api.fetchRoom(S.roomCode);
-      if (!fresh || fresh.phase !== 'lobby') return;
-      await patch(R.startPatch(fresh, S.memes, S.situations));
-    } catch (e) {
-      if (e instanceof R.GameError) toast(e.message, 5000); else netError(e);
-      btn.disabled = false;
-    }
+    try { await act(api.start); } catch (e) { say(e); btn.disabled = false; }
   });
 }
 
@@ -287,19 +197,18 @@ export function readerTap(el) {
 }
 
 async function readerChoose(half) {
-  const room = S.room;
-  if (room?.phase !== 'reader' || !amReader() || !S.shownSits) return;
-  const sit = S.shownSits[half];
+  if (S.room?.phase !== 'reader' || !amReader() || !S.shownSits) return;
   V.markReaderChoice(half);
   await once('choose', async () => {
-    try { await patch(R.choosePatch(sit)); } catch (e) { netError(e); S.screenKey = ''; render(S.room); }
+    try { await act((code, token) => api.choose(code, token, half)); }
+    catch (e) { say(e); S.screenKey = ''; render(S.room); }
   });
 }
 
 // Мем сначала открывается целиком — выбрать вслепую по мелкой превьюшке нельзя
 export function openHandCard(el) {
   const i = Number(el.dataset.index);
-  const m = S.room?.hands?.[S.myIdx]?.[i];
+  const m = S.view?.hand?.[i];
   if (!m) return;
   openMeme(m, { label: '✅ Выбрать этот мем', fn: () => selectCard(i) }, 'Выбери — потом нажми «Отправить мем»');
 }
@@ -315,16 +224,12 @@ function selectCard(i) {
 export async function submitMeme() {
   const i = S.selectedHand;
   const room = S.room;
-  if (i == null || room?.phase !== 'picking' || room.submissions?.[S.myIdx]) return;
+  if (i == null || room?.phase !== 'picking' || room.submitted?.[S.myIdx]) return;
   const btn = $('submit-btn');
   btn.disabled = true;
   await once('submit', async () => {
-    try {
-      receive(await api.playCard(S.roomCode, S.myIdx, i));
-    } catch (e) {
-      netError(e);
-      btn.disabled = false;
-    }
+    try { await act((code, token) => api.play(code, token, i)); }
+    catch (e) { say(e); btn.disabled = false; }
   });
 }
 
@@ -348,13 +253,13 @@ function judgeSelect(i) {
 }
 
 export async function judgeConfirm() {
-  const card = S.judgeCards[S.judgeSelected];
-  if (!card || S.room?.phase !== 'judging' || !amReader()) return;
+  const pos = S.judgeSelected;
+  if (pos == null || S.room?.phase !== 'judging' || !amReader()) return;
   const btn = $('judge-confirm-btn');
   btn.disabled = true;
   await once('judge', async () => {
-    try { await patch(R.judgePatch(S.room, card.playerIdx)); }
-    catch (e) { netError(e); btn.disabled = false; }
+    try { await act((code, token) => api.judge(code, token, pos)); }
+    catch (e) { say(e); btn.disabled = false; }
   });
 }
 
@@ -378,10 +283,9 @@ export async function nextRound() {
   btn.disabled = true;
   await once('next', async () => {
     try {
-      const p = R.nextRoundPatch(S.room, S.situations);
-      if (p.endReason === 'cards') toast('Мемы закончились — игра окончена!', 4000);
-      await patch(p);
-    } catch (e) { netError(e); }
+      const room = await act(api.next);
+      if (room?.endReason === 'cards') toast('Мемы закончились — игра окончена!', 4000);
+    } catch (e) { say(e); }
     finally { btn.disabled = false; }
   });
 }
@@ -396,8 +300,9 @@ export async function leaveGame() {
   if (!confirm('Выйти из игры?')) return;
   closeMenu();
   const room = S.room;
+  leaving = true;
   if (room && room.phase !== 'end' && !S.preview) {
-    try { await api.patchRoom(S.roomCode, R.leavePatch(room, S.myIdx)); } catch { /* уйдём в любом случае */ }
+    try { await api.leave(S.roomCode, deviceToken()); } catch { /* уйдём в любом случае */ }
   }
   goHome('Вы вышли из игры');
 }

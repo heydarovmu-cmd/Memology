@@ -33,7 +33,7 @@
   <!-- ВХОД -->
   <section class="config-panel auth-panel" id="auth-login" hidden>
     <div class="config-title">🔐 Вход для админа</div>
-    <p class="config-sub">Менять мемы, ситуации и смотреть предложения может только админ.</p>
+    <p class="config-sub">Мемы, ситуации и предложения видит и меняет только админ.</p>
     <form class="auth-form" id="login-form">
       <div>
         <label class="config-label" for="login-email">Почта</label>
@@ -51,12 +51,12 @@
   <!-- ВОШЁЛ, НО ЕЩЁ НЕ АДМИН -->
   <section class="config-panel auth-panel" id="auth-setup" hidden>
     <div class="config-title">🛡️ Последний шаг</div>
-    <p class="config-sub">Ты вошёл как <strong id="setup-email"></strong>, но база ещё не знает, что ты админ.</p>
+    <p class="config-sub" id="setup-lead"></p>
     <div class="setup-hint">
       1. Нажми «Скопировать SQL»<br>
       2. Supabase → <strong class="c-orange">SQL Editor</strong> → New query → вставь → <strong>Run</strong><br>
       3. Вернись сюда и нажми «Проверить снова»<br>
-      После этого всё, кроме чтения мемов и ситуаций и отправки предложений, будет доступно только тебе.
+      После этого мемы, ситуации и предложения видишь только ты, а игрокам сервер раздаёт лишь их карты.
     </div>
     <pre class="sql-code setup-code" id="setup-sql"></pre>
     <div class="config-actions">
@@ -69,7 +69,7 @@
   <div id="admin-content" hidden>
   <div class="admin-tools">
     <button class="btn btn-secondary btn-xs" data-action="loadAll">🔄 Обновить данные</button>
-    <button class="btn btn-secondary btn-xs" data-action="showSQL">📋 SQL для новой базы</button>
+    <button class="btn btn-secondary btn-xs" data-action="showSQL">📋 SQL базы</button>
   </div>
 
   <div class="container">

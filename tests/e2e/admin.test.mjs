@@ -128,6 +128,7 @@ test('первый вход: SQL с моим id, после его выполн�
     const sql = await p.page.textContent('#setup-sql');
     assert.match(sql, new RegExp(`values \\('${ADMIN.id}'\\)`));
     assert.match(sql, /create policy "admin manages memes"/);
+    assert.match(sql, /function public\.mg_play/, 'в SQL есть серверная логика игры');
     assert.equal(await p.page.isVisible('#admin-content'), false);
     // «Выполнили SQL» в Supabase
     g.backend.secured = true;
@@ -136,6 +137,20 @@ test('первый вход: SQL с моим id, после его выполн�
     await p.page.waitForSelector('#admin-content:not([hidden])');
     await p.page.waitForFunction(() => /Подключено/.test(document.getElementById('db-status').textContent));
     assert.match(await p.page.textContent('#account-email'), /admin@memology\.test/);
+  } finally { await g.close(); }
+});
+
+test('админ видит просьбу обновить SQL, если сервер старой версии', async () => {
+  const g = new Game({ backend: { secured: true, admins: [ADMIN.id], sqlVersion: 1 } });
+  try {
+    const p = await g.newPlayer('admin', { url: 'memology-admin.html' });
+    await login(p);
+    await p.page.waitForSelector('#auth-setup:not([hidden])');
+    assert.match(await p.page.textContent('#setup-lead'), /обнов/i);
+    assert.match(await p.page.textContent('#setup-sql'), new RegExp(ADMIN.id));
+    g.backend.sqlVersion = 2;
+    await p.page.click('[data-action="checkAdmin"]');
+    await p.page.waitForSelector('#admin-content:not([hidden])');
   } finally { await g.close(); }
 });
 
@@ -161,16 +176,15 @@ test('шестерёнка в игре — только на устройств�
   } finally { await g.close(); }
 });
 
-test('закрытая база: игра работает анонимно, писать в контент нельзя', async () => {
+test('закрытая база: игроку не виден каталог, писать в контент нельзя', async () => {
   const g = new Game({ backend: { secured: true, admins: [ADMIN.id] } });
-  g.backend.memes[0].active = false;
   try {
     const host = await g.setup(3, { rounds: 5 });
     const memeIds = await host.page.evaluate(async () => {
       const r = await fetch('https://dcxamyfvfoeoefcrdcqq.supabase.co/rest/v1/memes?select=id', { headers: { apikey: 'sb_publishable_x' } });
       return (await r.json()).map(m => m.id);
     });
-    assert.ok(!memeIds.includes(1), 'скрытый мем игрокам не виден');
+    assert.deepEqual(memeIds, [], 'каталог мемов игрокам не виден');
     const del = await host.page.evaluate(async () => {
       const r = await fetch('https://dcxamyfvfoeoefcrdcqq.supabase.co/rest/v1/memes?id=eq.2', { method: 'DELETE', headers: { apikey: 'sb_publishable_x', Prefer: 'return=representation' } });
       return (await r.json()).length;

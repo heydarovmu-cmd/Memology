@@ -1,23 +1,24 @@
-// localStorage: сессия (вернуться в игру после обновления страницы),
-// кэш контента (играть, если база недоступна) и id устройства.
+// localStorage: сессия (вернуться в игру после обновления страницы)
+// и секрет устройства, по которому сервер узнаёт игрока.
 // Любой доступ обёрнут в try: в приватном режиме хранилище может бросать.
 
 import { GAME } from '../config.js';
 import { randomId } from './random.js';
 
-const KEYS = { session: 'mg_session', content: 'mg_content', cid: 'mg_cid' };
+const KEYS = { session: 'mg_session', token: 'mg_cid' };
 
 const read = key => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } };
 const write = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* нет места или запрещено */ } };
 const remove = key => { try { localStorage.removeItem(key); } catch { /* ничего */ } };
 
-// Id устройства: по нему игрок узнаёт «своё» место за столом
-let cidCache = null;
-export function clientId() {
-  if (cidCache) return cidCache;
-  let cid = read(KEYS.cid);
-  if (typeof cid !== 'string' || !cid) { cid = randomId(); write(KEYS.cid, cid); }
-  return (cidCache = cid);
+// Секрет устройства. Сервер выдаёт по нему только карты этого игрока,
+// поэтому он никуда не публикуется.
+let tokenCache = null;
+export function deviceToken() {
+  if (tokenCache) return tokenCache;
+  let t = read(KEYS.token);
+  if (typeof t !== 'string' || t.length < 16) { t = randomId(24); write(KEYS.token, t); }
+  return (tokenCache = t);
 }
 
 export function saveSession({ code, idx, name }) {
@@ -34,9 +35,5 @@ export function loadSession() {
 
 export const clearSession = () => remove(KEYS.session);
 
-export function cacheContent(content) { write(KEYS.content, content); }
-
-export function cachedContent() {
-  const c = read(KEYS.content);
-  return c?.memes?.length && c?.situations?.length >= 2 ? c : null;
-}
+// Кэш каталога от прошлой версии игры больше не нужен
+remove('mg_content');

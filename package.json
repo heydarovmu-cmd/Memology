@@ -4,8 +4,9 @@
   "type": "module",
   "description": "Memology — многопользовательская карточная игра с мемами",
   "scripts": {
-    "test": "node --test --test-concurrency=1 tests/unit/*.test.mjs tests/e2e/*.test.mjs",
+    "test": "node --test --test-concurrency=1 tests/unit/*.test.mjs tests/db/*.test.mjs tests/e2e/*.test.mjs",
     "test:unit": "node --test tests/unit/*.test.mjs",
+    "test:db": "node --test --test-concurrency=1 tests/db/*.test.mjs",
     "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.mjs"
   },
   "devDependencies": {
