@@ -8,7 +8,7 @@ const TPL = readFileSync(new URL('../../supabase/setup.sql', import.meta.url), '
 
 test('SQL получает id админа и версию, которую ждёт игра', () => {
   const sql = personalize(TPL, ID);
-  assert.match(sql, new RegExp(`values \\('${ID}'\\)`));
+  assert.match(sql, new RegExp(`where id::text = '${ID}'`));
   assert.ok(!sql.includes('__ADMIN_USER_ID__'));
   assert.match(sql, new RegExp(`mg_version\\(\\)\\s*returns int language sql immutable as \\$\\$ select ${SQL_VERSION} \\$\\$`));
 });
