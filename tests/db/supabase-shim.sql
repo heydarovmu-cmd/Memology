@@ -42,6 +42,15 @@ create policy "public delete memes" on public.memes for delete using (true);
 create policy "public insert suggestions" on public.suggestions for insert with check (true);
 create policy "public read suggestions" on public.suggestions for select using (true);
 create policy "public upload memes storage" on storage.objects for insert with check (bucket_id = 'memes');
+-- Как в боевой базе до обновления: комнаты открыты на запись, старые функции доступны всем
+alter table public.rooms enable row level security;
+create policy "rooms read" on public.rooms for select using (true);
+create policy "rooms insert" on public.rooms for insert with check (true);
+create policy "rooms update" on public.rooms for update using (true);
+alter publication supabase_realtime add table public.rooms;
+create function public.patch_room(p_code text, p_paths jsonb) returns jsonb language sql security definer as $$ select '{}'::jsonb $$;
+create function public.play_card(p_code text, p_player text, p_index int) returns jsonb language sql security definer as $$ select '{}'::jsonb $$;
+create function public.cleanup_old_rooms() returns void language sql security definer as $$ delete from public.rooms where created_at < now() - interval '1 day' $$;
 
 insert into public.memes (title, image_url, active)
 select 'Мем ' || i, 'https://img.test/m' || i || '.svg', true from generate_series(1, 40) i;

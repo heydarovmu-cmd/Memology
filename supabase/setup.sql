@@ -56,7 +56,10 @@ as $$
   select exists (select 1 from public.admins where user_id = auth.uid());
 $$;
 
-insert into public.admins (user_id) values ('__ADMIN_USER_ID__') on conflict do nothing;
+-- Админ добавляется, только если такой пользователь есть в Supabase Auth
+insert into public.admins (user_id)
+select id from auth.users where id::text = '__ADMIN_USER_ID__'
+on conflict do nothing;
 
 -- ── 3. Правила доступа к контенту ──────────────────────────────────
 -- Старые правила (в том числе открывавшие чтение и запись всем) удаляются
@@ -108,12 +111,32 @@ begin
       data jsonb not null,
       created_at timestamptz default now()
     );
-    alter table public.rooms enable row level security;
-    create policy "players read rooms" on public.rooms for select using (true);
-    begin
-      alter publication supabase_realtime add table public.rooms;
-    exception when others then null;
-    end;
+  end if;
+end $$;
+
+-- Комнату игроки только читают; менять её могут лишь функции mg_* ниже
+alter table public.rooms enable row level security;
+do $$
+declare r record;
+begin
+  for r in select policyname from pg_policies where schemaname = 'public' and tablename = 'rooms' loop
+    execute format('drop policy %I on public.rooms', r.policyname);
+  end loop;
+  begin
+    alter publication supabase_realtime add table public.rooms;
+  exception when others then null;   -- уже добавлена
+  end;
+end $$;
+create policy "players read rooms" on public.rooms for select using (true);
+revoke insert, update, delete, truncate on public.rooms from anon, authenticated;
+
+-- Функции прошлой версии писали в комнату что угодно — убрать
+drop function if exists public.patch_room(text, jsonb);
+drop function if exists public.play_card(text, text, int);
+do $$
+begin
+  if to_regprocedure('public.cleanup_old_rooms()') is not null then
+    revoke execute on function public.cleanup_old_rooms() from public, anon, authenticated;
   end if;
 end $$;
 

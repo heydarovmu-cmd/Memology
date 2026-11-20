@@ -126,7 +126,7 @@ test('первый вход: SQL с моим id, после его выполн�
     await login(p);
     await p.page.waitForSelector('#auth-setup:not([hidden])');
     const sql = await p.page.textContent('#setup-sql');
-    assert.match(sql, new RegExp(`values \\('${ADMIN.id}'\\)`));
+    assert.match(sql, new RegExp(`where id::text = '${ADMIN.id}'`));
     assert.match(sql, /create policy "admin manages memes"/);
     assert.match(sql, /function public\.mg_play/, 'в SQL есть серверная логика игры');
     assert.equal(await p.page.isVisible('#admin-content'), false);

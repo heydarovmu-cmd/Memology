@@ -224,6 +224,29 @@ test('админ видит и меняет всё, аноним — тольк�
   await rejects(db.query('select public.mg_settle(\'X\');', { role: 'anon' }), /permission denied/);
 });
 
+test('комнату нельзя менять в обход игры; старых функций нет', async () => {
+  const room = await db.rpc('mg_create', { p_name: 'Хост', p_token: 'host-token-1', p_rounds: 5, p_max: 3 });
+  await rejects(db.query(`update rooms set data = '{}' where code = '${room.code}';`, { role: 'anon' }), /permission denied/);
+  await rejects(db.query("insert into rooms (code, data) values ('HACK', '{}');", { role: 'anon' }), /permission denied/);
+  assert.equal((await db.json(`select data::text from rooms where code = '${room.code}';`)).phase, 'lobby');
+  assert.equal(await db.query("select count(*) from pg_proc where proname in ('patch_room', 'play_card');"), '0');
+  await rejects(db.query('select public.cleanup_old_rooms();', { role: 'anon' }), /permission denied/);
+  assert.equal(await db.query("select count(*) from pg_policies where tablename = 'rooms';"), '1');
+});
+
+test('SQL без существующего админа выполняется и никого не назначает', async () => {
+  const other = await startPg({ admin: false });
+  try {
+    const sql = readFileSync(path.resolve('supabase/setup.sql'), 'utf8')
+      .replace(/__ADMIN_USER_ID__/g, '99999999-9999-4999-8999-999999999999');
+    const f = path.join(other.dir, 'noadmin.sql');
+    writeFileSync(f, sql);
+    await other.query(`\\i ${f}`);
+    assert.equal(await other.query('select count(*) from admins;'), '0');
+    assert.equal(await other.query('select public.mg_version();'), '2');
+  } finally { await other.stop(); }
+});
+
 test('повторный запуск SQL ничего не ломает', async () => {
   const sql = readFileSync(path.resolve('supabase/setup.sql'), 'utf8').replace(/__ADMIN_USER_ID__/g, ADMIN_ID);
   const f = path.join(db.dir, 'again.sql');
