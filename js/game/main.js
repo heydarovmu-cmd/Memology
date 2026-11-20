@@ -1,5 +1,6 @@
 // Точка входа игры: связывает кнопки разметки (data-action) с действиями.
-import { bindActions, softenBrokenImages } from '../shared/dom.js';
+import { $, bindActions, softenBrokenImages } from '../shared/dom.js';
+import { ADMIN_FLAG } from '../config.js';
 import * as C from './controller.js';
 import { showScreen, scaleTagline, openModal, closeModal, toggleMenu, closeMenu, closeLb, lbGo } from './ui.js';
 import { startPreview, pvBar, pvShow } from './preview.js';
@@ -21,10 +22,6 @@ bindActions({
   selectRounds: C.selectRounds,
   createRoom: C.createRoom,
   joinRoom: C.joinRoom,
-  adminEntry: C.adminEntry,
-  pinPress: C.pinPress,
-  pinBack: C.pinBack,
-  pinClear: C.pinClear,
 
   // лобби
   copyCode: C.copyCode,
@@ -63,6 +60,9 @@ window.addEventListener('resize', scaleTagline);
 // Enter в полях формы — как нажатие главной кнопки
 document.getElementById('host-name').addEventListener('keydown', e => { if (e.key === 'Enter') C.createRoom(); });
 document.getElementById('join-code').addEventListener('keydown', e => { if (e.key === 'Enter') C.joinRoom(); });
+
+// Шестерёнка видна только на устройстве, где вошёл админ
+try { $('admin-gear').hidden = localStorage.getItem(ADMIN_FLAG) !== '1'; } catch { /* приватный режим */ }
 
 scaleTagline();
 document.fonts?.ready.then(scaleTagline);

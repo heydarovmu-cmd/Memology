@@ -5,20 +5,31 @@ import { Game, closeBrowser } from './harness.mjs';
 
 after(closeBrowser);
 
+const ADMIN = { id: '0b6c1d2e-3f40-4a5b-8c6d-7e8f9a0b1c2d', email: 'admin@memology.test', password: 'secret123' };
+
+async function login(p, email = ADMIN.email, password = ADMIN.password) {
+  await p.page.waitForSelector('#auth-login:not([hidden])');
+  await p.page.fill('#login-email', email);
+  await p.page.fill('#login-password', password);
+  await p.page.click('#login-btn');
+}
+
+// Админка с настроенной базой: вошёл админ
 async function withAdmin(prepare, fn) {
-  const g = new Game();
+  const g = new Game({ backend: { secured: true, admins: [ADMIN.id] } });
   prepare?.(g.backend);
   try {
     const p = await g.newPlayer('admin', { url: 'memology-admin.html' });
+    await login(p);
     await p.page.waitForFunction(() => /Подключено/.test(document.getElementById('db-status').textContent));
-    await fn(p, g.backend);
-    assert.deepEqual(g.errors(), [], 'ошибки в консоли браузера');
+    await fn(p, g.backend, g);
+    assert.deepEqual(g.errors().filter(e => !/40[13]/.test(e)), [], 'ошибки в консоли браузера');
   } finally {
     await g.close();
   }
 }
 
-test('админка сама подключается к базе игры и показывает контент', () => withAdmin(null, async (p, b) => {
+test('админ входит и видит весь контент', () => withAdmin(null, async (p, b) => {
   assert.equal(await p.page.locator('#meme-grid .meme-item').count(), b.memes.length);
   assert.equal(await p.page.locator('#sit-list .sit-item').count(), b.situations.length);
   const body = await p.page.textContent('body');
@@ -94,3 +105,86 @@ test('предложение игрока превращается в ситуа
   assert.ok(b.situations.some(s => s.text === 'Когда предложил ситуацию'));
   assert.equal(b.suggestions[0].handled, true);
 }));
+
+test('без входа админка ничего не показывает; неверный пароль', async () => {
+  const g = new Game({ backend: { secured: true, admins: [ADMIN.id] } });
+  try {
+    const p = await g.newPlayer('guest', { url: 'memology-admin.html' });
+    await p.page.waitForSelector('#auth-login:not([hidden])');
+    assert.equal(await p.page.isVisible('#admin-content'), false);
+    assert.equal(await p.page.locator('#meme-grid .meme-item').count(), 0);
+    await login(p, ADMIN.email, 'wrong');
+    await p.page.waitForFunction(() => /Неверная почта или пароль/.test(document.getElementById('login-error').textContent));
+    assert.equal(await p.page.isVisible('#admin-content'), false);
+  } finally { await g.close(); }
+});
+
+test('первый вход: SQL с моим id, после его выполнения — доступ', async () => {
+  const g = new Game({ backend: { secured: false } });
+  try {
+    const p = await g.newPlayer('admin', { url: 'memology-admin.html' });
+    await login(p);
+    await p.page.waitForSelector('#auth-setup:not([hidden])');
+    const sql = await p.page.textContent('#setup-sql');
+    assert.match(sql, new RegExp(`values \\('${ADMIN.id}'\\)`));
+    assert.match(sql, /create policy "admin manages memes"/);
+    assert.equal(await p.page.isVisible('#admin-content'), false);
+    // «Выполнили SQL» в Supabase
+    g.backend.secured = true;
+    g.backend.admins.add(ADMIN.id);
+    await p.page.click('[data-action="checkAdmin"]');
+    await p.page.waitForSelector('#admin-content:not([hidden])');
+    await p.page.waitForFunction(() => /Подключено/.test(document.getElementById('db-status').textContent));
+    assert.match(await p.page.textContent('#account-email'), /admin@memology\.test/);
+  } finally { await g.close(); }
+});
+
+test('шестерёнка в игре — только на устройстве админа', async () => {
+  const g = new Game({ backend: { secured: true, admins: [ADMIN.id] } });
+  try {
+    const player = await g.newPlayer('player');
+    assert.equal(await player.page.isVisible('#admin-gear'), false, 'у игрока шестерёнки нет');
+    assert.equal(await player.page.locator('#screen-admin-pin').count(), 0, 'экрана PIN больше нет');
+
+    const admin = await g.newPlayer('admin', { url: 'memology-admin.html' });
+    await login(admin);
+    await admin.page.waitForSelector('#admin-content:not([hidden])');
+    await admin.page.goto('https://memology.test/memology.html');
+    await admin.page.waitForSelector('#admin-gear', { state: 'visible' });
+    await admin.page.click('#admin-gear');
+    await admin.page.waitForURL(/memology-admin\.html$/);
+    await admin.page.waitForSelector('#admin-content:not([hidden])');
+    await admin.page.click('#account [data-action="signOut"]');
+    await admin.page.waitForSelector('#auth-login:not([hidden])');
+    await admin.page.goto('https://memology.test/memology.html');
+    assert.equal(await admin.page.isVisible('#admin-gear'), false, 'после выхода шестерёнка пропадает');
+  } finally { await g.close(); }
+});
+
+test('закрытая база: игра работает анонимно, писать в контент нельзя', async () => {
+  const g = new Game({ backend: { secured: true, admins: [ADMIN.id] } });
+  g.backend.memes[0].active = false;
+  try {
+    const host = await g.setup(3, { rounds: 5 });
+    const memeIds = await host.page.evaluate(async () => {
+      const r = await fetch('https://dcxamyfvfoeoefcrdcqq.supabase.co/rest/v1/memes?select=id', { headers: { apikey: 'sb_publishable_x' } });
+      return (await r.json()).map(m => m.id);
+    });
+    assert.ok(!memeIds.includes(1), 'скрытый мем игрокам не виден');
+    const del = await host.page.evaluate(async () => {
+      const r = await fetch('https://dcxamyfvfoeoefcrdcqq.supabase.co/rest/v1/memes?id=eq.2', { method: 'DELETE', headers: { apikey: 'sb_publishable_x', Prefer: 'return=representation' } });
+      return (await r.json()).length;
+    });
+    assert.equal(del, 0, 'игрок не может удалить мем');
+    assert.ok(g.backend.memes.some(m => m.id === 2));
+    await g.start(host);
+    await g.playRound();
+    const p = g.byIdx(1);
+    await p.menu('Предложить');
+    await p.page.locator('#modal-suggest .suggest-opt', { hasText: 'ситуацию' }).click();
+    await p.page.fill('#suggest-text', 'Предложение из закрытой базы');
+    await p.page.locator('#modal-suggest button', { hasText: 'Отправить' }).click();
+    await g.waitFor(() => g.backend.suggestions.length === 1, 'предложение дошло');
+    assert.deepEqual(g.errors(), []);
+  } finally { await g.close(); }
+});

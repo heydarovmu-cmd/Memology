@@ -1,6 +1,6 @@
 // Ход игры: действия игрока, реакция на обновления комнаты и обязанности хоста.
 import { $, toast } from '../shared/dom.js';
-import { ADMIN_PIN, GAME } from '../config.js';
+import { GAME } from '../config.js';
 import { api } from './api.js';
 import { roomCode, randomId } from './random.js';
 import * as R from './rules.js';
@@ -423,23 +423,6 @@ export function selectPlayers(el) { pickNum(el, '.players-grid'); S.selectedPlay
 export function selectRounds(el) { pickNum(el, '.rounds-grid'); S.selectedRounds = Number(el.dataset.value); }
 function pickNum(el, grid) {
   document.querySelectorAll(`${grid} .num-btn`).forEach(b => b.classList.toggle('selected', b === el));
-}
-
-// ── PIN администратора ─────────────────────────────────
-let pin = '';
-const pinDots = () => { for (let i = 0; i < 4; i++) $('pin-d' + i).classList.toggle('on', i < pin.length); };
-export function adminEntry() { pin = ''; pinDots(); $('pin-error').textContent = ''; showScreen('screen-admin-pin'); }
-export function pinPress(el) {
-  if (pin.length >= 4) return;
-  pin += el.dataset.digit;
-  pinDots();
-  if (pin.length === 4) setTimeout(checkPin, 200);
-}
-export function pinBack() { pin = pin.slice(0, -1); pinDots(); }
-export function pinClear() { pin = ''; pinDots(); }
-function checkPin() {
-  if (pin === ADMIN_PIN) showScreen('screen-create');
-  else { $('pin-error').textContent = 'Неверный PIN'; pin = ''; pinDots(); }
 }
 
 // ── Предложения ────────────────────────────────────────

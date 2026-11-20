@@ -8,6 +8,8 @@ import { SUPABASE } from '../config.js';
 let client = null;
 const sb = () => (client ||= window.supabase.createClient(SUPABASE.url, SUPABASE.anonKey, {
   realtime: { params: { eventsPerSecond: 10 } },
+  // Игра работает анонимно. Вход админа живёт отдельно (js/admin/auth.js)
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
 }));
 
 async function rest(path, opts = {}) {

@@ -66,9 +66,8 @@ export class Game {
       return route.fulfill({ path: path.join(HERE, 'fake-supabase-client.js'), contentType: 'text/javascript' });
     }
     if (url.host === SUPA_HOST && url.pathname.startsWith('/rest/')) return this.backend.handleRest(route);
-    if (url.host === SUPA_HOST && url.pathname.startsWith('/storage/')) {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
-    }
+    if (url.host === SUPA_HOST && url.pathname.startsWith('/storage/')) return this.backend.handleStorage(route);
+    if (url.host === SUPA_HOST && url.pathname.startsWith('/auth/')) return this.backend.handleAuth(route);
     if (url.host === 'img.test') {
       return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: memeSvg(url.pathname.replace(/\D/g, '')) });
     }

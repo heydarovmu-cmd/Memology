@@ -45,37 +45,8 @@
       <button class="btn btn-primary btn-big" data-action="show" data-screen="screen-create">🏠 Создать комнату</button>
       <button class="btn btn-cyan btn-big" data-action="show" data-screen="screen-join">🔗 Войти в комнату</button>
       <button class="btn btn-secondary" data-action="openModal" data-modal="modal-howto">📖 Как играть</button>
-      <button class="admin-gear" data-action="adminEntry" aria-label="Администратор">⚙️</button>
+      <a class="admin-gear" id="admin-gear" href="memology-admin.html" aria-label="Админка" hidden>⚙️</a>
     </div>
-  </div>
-</section>
-
-<!-- ═══ PIN АДМИНИСТРАТОРА ═══ -->
-<section class="screen" id="screen-admin-pin">
-  <div class="panel pin-panel">
-    <div class="pin-icon">🔐</div>
-    <h2 class="pin-title">Администратор</h2>
-    <p class="pin-hint">Введи PIN-код</p>
-    <div class="pin-dots">
-      <div class="pin-dot" id="pin-d0"></div><div class="pin-dot" id="pin-d1"></div>
-      <div class="pin-dot" id="pin-d2"></div><div class="pin-dot" id="pin-d3"></div>
-    </div>
-    <div class="pin-pad">
-      <button class="num-btn" data-action="pinPress" data-digit="1">1</button>
-      <button class="num-btn" data-action="pinPress" data-digit="2">2</button>
-      <button class="num-btn" data-action="pinPress" data-digit="3">3</button>
-      <button class="num-btn" data-action="pinPress" data-digit="4">4</button>
-      <button class="num-btn" data-action="pinPress" data-digit="5">5</button>
-      <button class="num-btn" data-action="pinPress" data-digit="6">6</button>
-      <button class="num-btn" data-action="pinPress" data-digit="7">7</button>
-      <button class="num-btn" data-action="pinPress" data-digit="8">8</button>
-      <button class="num-btn" data-action="pinPress" data-digit="9">9</button>
-      <button class="num-btn pin-small" data-action="pinClear">C</button>
-      <button class="num-btn" data-action="pinPress" data-digit="0">0</button>
-      <button class="num-btn pin-back" data-action="pinBack" aria-label="Стереть">⌫</button>
-    </div>
-    <div class="pin-error" id="pin-error"></div>
-    <button class="btn btn-secondary btn-wide" data-action="show" data-screen="screen-welcome">← Назад</button>
   </div>
 </section>
 
