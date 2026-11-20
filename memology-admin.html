@@ -20,41 +20,57 @@
     <div class="topbar-logo">MEMOLOGY</div>
     <div class="topbar-sub">Панель управления контентом</div>
   </div>
+  <div class="account" id="account" hidden>
+    <span class="account-email" id="account-email"></span>
+    <a class="btn btn-secondary btn-xs" href="memology.html">🎮 К игре</a>
+    <button class="btn btn-secondary btn-xs" data-action="signOut">Выйти</button>
+  </div>
   <div class="status-chip loading" id="db-status">Подключение...</div>
 </header>
 
 <main class="page">
 
-  <!-- ПОДКЛЮЧЕНИЕ -->
-  <section class="config-panel">
-    <div class="config-title">⚙️ Настройка подключения</div>
-    <p class="config-sub">По умолчанию — база игры. Поменять можно ключами из Supabase Dashboard → Project Settings → API</p>
-    <div class="config-row">
+  <!-- ВХОД -->
+  <section class="config-panel auth-panel" id="auth-login" hidden>
+    <div class="config-title">🔐 Вход для админа</div>
+    <p class="config-sub">Менять мемы, ситуации и смотреть предложения может только админ.</p>
+    <form class="auth-form" id="login-form">
       <div>
-        <label class="config-label" for="cfg-url">Supabase URL</label>
-        <input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co">
+        <label class="config-label" for="login-email">Почта</label>
+        <input type="email" id="login-email" autocomplete="username" required>
       </div>
       <div>
-        <label class="config-label" for="cfg-key">Anon/Public Key</label>
-        <input type="text" id="cfg-key" placeholder="eyJhbGci...">
+        <label class="config-label" for="login-password">Пароль</label>
+        <input type="password" id="login-password" autocomplete="current-password" required>
       </div>
-    </div>
-    <div class="config-actions">
-      <button class="btn btn-primary" data-action="testConnection">🔌 Проверить подключение</button>
-      <button class="btn btn-secondary" data-action="loadAll">🔄 Обновить данные</button>
-      <a href="https://supabase.com" target="_blank" rel="noopener" class="btn btn-secondary btn-link">📖 Supabase</a>
-    </div>
+      <button class="btn btn-primary" type="submit" id="login-btn">Войти</button>
+    </form>
+    <div class="auth-error" id="login-error"></div>
+  </section>
+
+  <!-- ВОШЁЛ, НО ЕЩЁ НЕ АДМИН -->
+  <section class="config-panel auth-panel" id="auth-setup" hidden>
+    <div class="config-title">🛡️ Последний шаг</div>
+    <p class="config-sub">Ты вошёл как <strong id="setup-email"></strong>, но база ещё не знает, что ты админ.</p>
     <div class="setup-hint">
-      <strong>Быстрый старт:</strong><br>
-      1. Зайди на <strong class="c-blue">supabase.com</strong> → создай бесплатный проект<br>
-      2. Перейди в <strong class="c-orange">SQL Editor</strong> и выполни SQL ниже (кнопка)<br>
-      3. Вставь URL и ключ выше → нажми «Проверить подключение»<br>
-      4. Загружай мемы и ситуации!
-      <div class="setup-sql">
-        <button class="btn btn-secondary btn-xs" data-action="showSQL">📋 Показать SQL для создания таблиц</button>
-      </div>
+      1. Нажми «Скопировать SQL»<br>
+      2. Supabase → <strong class="c-orange">SQL Editor</strong> → New query → вставь → <strong>Run</strong><br>
+      3. Вернись сюда и нажми «Проверить снова»<br>
+      После этого всё, кроме чтения мемов и ситуаций и отправки предложений, будет доступно только тебе.
+    </div>
+    <pre class="sql-code setup-code" id="setup-sql"></pre>
+    <div class="config-actions">
+      <button class="btn btn-primary" data-action="copySetupSQL">📋 Скопировать SQL</button>
+      <button class="btn btn-green" data-action="checkAdmin">🔄 Проверить снова</button>
+      <button class="btn btn-secondary" data-action="signOut">Выйти</button>
     </div>
   </section>
+
+  <div id="admin-content" hidden>
+  <div class="admin-tools">
+    <button class="btn btn-secondary btn-xs" data-action="loadAll">🔄 Обновить данные</button>
+    <button class="btn btn-secondary btn-xs" data-action="showSQL">📋 SQL для новой базы</button>
+  </div>
 
   <div class="container">
 
@@ -146,6 +162,7 @@
       <div id="sug-list"><div class="empty-note">Загрузка...</div></div>
     </section>
 
+  </div>
   </div>
 </main>
 

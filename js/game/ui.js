@@ -3,7 +3,7 @@ import { $, esc } from '../shared/dom.js';
 import { imageUrl } from './api.js';
 import { S } from './state.js';
 
-const NO_MENU = ['screen-welcome', 'screen-admin-pin', 'screen-create', 'screen-join'];
+const NO_MENU = ['screen-welcome', 'screen-create', 'screen-join'];
 
 export const activeScreen = () => document.querySelector('.screen.active')?.id;
 
