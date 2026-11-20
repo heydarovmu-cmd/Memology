@@ -133,7 +133,6 @@ export function renderPick(room) {
   $('pick-hand').innerHTML = hand.map((m, i) => `
     <div class="hand-card" id="hc-${i}" data-action="openHandCard" data-index="${i}">
       ${memeImg(m, 78)}
-      <div class="hand-card-title">${esc(m.title)}</div>
     </div>`).join('');
   updatePick(room);
 }
@@ -181,7 +180,7 @@ export function renderJudge(room, revealed) {
     $('judge-instruction').textContent = '👇 Нажми на мем, чтобы рассмотреть его целиком';
     $('judge-table').innerHTML = cards.map((tc, i) => `
       <div class="table-card face-up flip-in" id="jc-${i}" data-action="openTableCard" data-index="${i}" style="animation-delay:${i * 0.07}s">
-        <div class="tc-inner">${memeImg(tc, 90)}<div class="tc-title">${esc(tc.title)}</div></div>
+        <div class="tc-inner">${memeImg(tc, 90)}</div>
       </div>`).join('');
     btn.hidden = false;
     btn.disabled = true;
@@ -206,14 +205,12 @@ export function renderResult(room) {
       <div class="winner-kicker">🏆 Победитель раунда</div>
       <div class="winner-name">${esc(winner.name)}</div>
       <div class="winner-img" data-action="openWinnerCard">${memeImg(winCard, 100)}</div>
-      <div class="winner-title">«${esc(winCard.title)}»</div>
     </div>` : '<div class="no-winner">Раунд без победителя 😅</div>';
 
   $('result-all-cards').innerHTML = cards.map((tc, i) => {
     const isWin = tc.playerIdx === room.winnerIdx;
     return `<div class="table-card face-up ${isWin ? 'winning' : ''}" data-action="openResultCard" data-index="${i}">
       <div class="tc-inner">${memeImg(tc, 90)}
-      <div class="tc-title">${esc(tc.title)}</div>
       <div class="tc-owner">${esc(nameOf(room, tc.playerIdx, '?'))}${isWin ? ' 🏆' : ''}</div></div></div>`;
   }).join('');
 

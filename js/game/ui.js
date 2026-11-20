@@ -46,9 +46,10 @@ export function closeMenu() {
 }
 
 // ── Мемы ──────────────────────────────────────────────
+// Название мема — служебное (часто это имя файла), игрокам его не показываем
 export function memeImg(m, h = 90) {
   if (!m) return '';
-  return `<img class="meme-img" src="${esc(imageUrl(m))}" alt="${esc(m.title)}" style="height:${h}px;width:100%;object-fit:cover;display:block">`;
+  return `<img class="meme-img" src="${esc(imageUrl(m))}" alt="Мем" style="height:${h}px;width:100%;object-fit:cover;display:block">`;
 }
 
 // Просмотр мема целиком. action — необязательная кнопка {label, fn}
@@ -56,7 +57,6 @@ let lbAction = null;
 export function openMeme(m, action, sub) {
   if (!m) return;
   $('lb-img').src = imageUrl(m);
-  $('lb-title').textContent = m.title || '';
   $('lb-sub').textContent = sub || '';
   lbAction = action || null;
   $('lb-acts').innerHTML = action

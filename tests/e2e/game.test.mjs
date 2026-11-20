@@ -427,6 +427,36 @@ test('игрок получает только свои карты: ни кат�
   assert.ok(!seen.some(t => /"hands"|"deck"/.test(t)));
 }));
 
+test('названия мемов (имена файлов) игрокам не показываются', () => withGame({}, async g => {
+  const host = await g.setup(3, { rounds: 5 });
+  await g.start(host);
+  const reader = g.byIdx(g.room().readerIdx);
+  await reader.waitScreen('screen-reader');
+  await reader.page.click('#sh-top');
+  const others = g.active().filter(p => p !== reader);
+  const p = others[0];
+  await p.waitScreen('screen-pick');
+  const noTitle = async (pl, sel) => assert.doesNotMatch(await pl.page.textContent(sel), /Мем \d/, `название видно в ${sel}`);
+  await noTitle(p, '#pick-hand');
+  await p.page.locator('#pick-hand .hand-card').first().click();
+  await noTitle(p, '#lb');
+  await p.page.click('#lb-go');
+  await p.page.click('#submit-btn');
+  await others[1].waitScreen('screen-pick');
+  await others[1].submitCard(0);
+  await reader.waitScreen('screen-judge');
+  await reader.page.locator('#judge-table .table-card.face-down').first().click();
+  await reader.page.waitForSelector('#judge-table .table-card.face-up');
+  await noTitle(reader, '#judge-table');
+  await reader.page.locator('#judge-table .table-card.face-up').first().click();
+  await noTitle(reader, '#lb');
+  await reader.page.click('#lb-go');
+  await reader.waitEnabled('#judge-confirm-btn');
+  await reader.page.click('#judge-confirm-btn');
+  await host.waitScreen('screen-result');
+  await noTitle(host, '#screen-result');
+}));
+
 test('модальные окна и просмотр мема', () => withGame({}, async g => {
   const host = await g.setup(3, { rounds: 5 });
   await host.page.click('#hamburger-btn');
