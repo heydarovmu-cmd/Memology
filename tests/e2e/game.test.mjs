@@ -92,11 +92,11 @@ test('ничья после последнего раунда — дополни
   assert.match(text, /дополнительном/);
 }));
 
-test('бесконечная игра заканчивается, когда кончаются мемы; ничья показана честно', () => withGame({}, async g => {
+test('игра заканчивается, когда кончаются мемы; ничья показана честно', () => withGame({}, async g => {
   const db = await database();
   await db.query('update memes set active = id <= 17;');
   try {
-    const host = await g.setup(3, { rounds: Infinity });
+    const host = await g.setup(3, { rounds: 21 });
     await g.start(host);
     assert.equal(g.room().deckCount, 2, 'в колоде остаток после раздачи 3×5');
     await playToEnd(g, { winner: lowestScorer });

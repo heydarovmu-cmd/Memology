@@ -262,8 +262,7 @@ export class Player {
     await this.waitScreen('screen-create');
     await this.page.fill('#host-name', name);
     await this.page.locator('.players-grid .num-btn', { hasText: new RegExp(`^${players}$`) }).click();
-    const label = rounds === Infinity || rounds === 9999 ? '∞' : String(rounds);
-    await this.page.locator('.rounds-grid .num-btn', { hasText: new RegExp(`^${label}$`) }).click();
+    await this.page.locator(`.rounds-grid .num-btn[data-value="${rounds}"]`).click();
     await this.btn('Создать комнату').click();
     await this.waitScreen('screen-lobby');
     await this.syncIdx();

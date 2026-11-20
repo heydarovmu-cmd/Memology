@@ -190,10 +190,17 @@ test('уходит читающий — раунд пропускается; у�
   assert.equal(d.endReason, 'players');
 });
 
+test('число раундов — только 3, 5, …, 21', async () => {
+  for (const r of [3, 21]) assert.equal((await db.rpc('mg_create', { p_name: 'Х', p_token: 'rounds-tok-' + r, p_rounds: r, p_max: 3 })).rounds, r);
+  for (const r of [1, 4, 25, 9999]) {
+    await rejects(db.rpc('mg_create', { p_name: 'Х', p_token: 'rounds-tok-x', p_rounds: r, p_max: 3 }), /bad_rounds/);
+  }
+});
+
 test('колода кончилась — игра заканчивается', async () => {
   await db.query('update memes set active = false where id > 17;');
   try {
-    const g = await started(3, { rounds: 9999 });
+    const g = await started(3, { rounds: 21 });
     let d;
     for (let i = 0; i < 30; i++) {
       d = await round(g);

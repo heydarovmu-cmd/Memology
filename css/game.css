@@ -244,7 +244,6 @@ input[type=text]:focus,textarea:focus{box-shadow:0 0 0 3px var(--blue-s)}
 .field-sm{margin-bottom:16px}
 .field-lg{margin-bottom:22px}
 .field-label{display:block;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700}
-.num-inf{font-size:1.6rem}
 #join-code{font-family:var(--hand);font-size:2rem;font-weight:900;letter-spacing:10px;text-align:center;text-transform:uppercase}
 /* лобби */
 .lobby{text-align:center;max-width:440px;width:100%}
