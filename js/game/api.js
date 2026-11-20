@@ -25,6 +25,7 @@ const MESSAGES = {
   few_players: 'Нужно минимум 3 игрока',
   few_situations: 'В базе меньше двух ситуаций',
   bad_name: 'Введи имя (до 20 символов)',
+  bad_rounds: 'Выбери число раундов',
   already_played: 'Мем уже отправлен',
   wrong_phase: 'Игра уже ушла дальше',
 };

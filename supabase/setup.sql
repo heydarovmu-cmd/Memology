@@ -309,7 +309,7 @@ declare v_code text; v_data jsonb; i int := 0;
 begin
   perform mg_check_name(p_name, p_token);
   if p_max is null or p_max not between 3 and 10 then raise exception 'bad_players'; end if;
-  if p_rounds is null or p_rounds < 1 then raise exception 'bad_rounds'; end if;
+  if p_rounds is null or p_rounds not in (3, 5, 7, 9, 11, 13, 15, 17, 19, 21) then raise exception 'bad_rounds'; end if;
   delete from room_secrets s
   where s.created_at < now() - interval '2 days' or not exists (select 1 from rooms r where r.code = s.code);
   loop
